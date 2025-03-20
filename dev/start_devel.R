@@ -1,136 +1,110 @@
 
 library(tidyverse)
+source(here::here('R', 'functions.R'))
 
 
 
-# experiment 1: pop'n comprised of composit schools ----
+# set up experiment parameters ----
 
-## set up sim -----
-# number of bootstrap iterations
+## simulation/bootstrap parameters ----
+
+# number of simulation/bootstrap iterations
 iters <- 1000
 
-# number of hauls sampled
-haul_num <- 500
+# number of bootstrap replicates
+bs_reps <- 10
 
-# catch limits on random uniform scalar
-c_lci = 0.5
-c_uci = 2
+## sampling parameters ----
 
-# school relative pop'n size
-pop_size <- c(240, 60, 15)
-p_sc <- pop_size / sum(pop_size)
+# number of sampling units (e.g., hauls)
+su_num <- 500
 
-# school compositions
-p_s1 <- c(0.1, 0.8, 0.1, 0, 0, 0, 0, 0)
-p_s2 <- c(0, 0.05, 0.1, 0.7, 0.1, 0.05, 0, 0)
-p_s3 <- c(0, 0, 0, 0.05, 0.1, 0.7, 0.1, 0.05)
+# number of samples per sampling unit (e.g., ages/lengths)
+# vector to test differences in number of samples across sampling unit
+su_samp <- c(20, 10)
 
-# compute true pop'n composition
-p_true <- colSums(rbind(p_s1, p_s2, p_s3) * pop_size) / sum(pop_size)
+# vector pf probabilities to select options of number of samples in sampling unit 
+p_su_samp <- c(0.9, 0.1)
 
+## population unit parameters ----
 
-## define sim functions ----
+# pop'n exponential decay (e.g., M)
+d <- 0.2
 
-# function to generate samples within a haul
-gen_haul_samp <- function(sc_smp){
-  if(sc_smp == 1){
-    # generate haul sample size (90% prob that 20, otherwise 10)
-    haul_samp <- if(stats::rbinom(1, 1, 0.9) == 1){20}else{10}
-    # generate multinomial sample based on school composition
-    samp_h <- cbind(1:length(p_s1), stats::rmultinom(1, haul_samp, p_s1))
-  }
-  if(sc_smp == 2){
-    haul_samp <- if(stats::rbinom(1, 1, 0.9) == 1){20}else{10}
-    samp_h <- cbind(1:length(p_s2), stats::rmultinom(1, haul_samp, p_s2))
-  }
-  if(sc_smp == 3){
-    haul_samp <- if(stats::rbinom(1, 1, 0.9) == 1){20}else{10}
-    samp_h <- cbind(1:length(p_s3), stats::rmultinom(1, haul_samp, p_s3))
-  }
-  list(samp_h = samp_h)
-}
+# number of population units sampled (e.g., number of schools/year classes)
+pu <- 3
+
+# number of population categories (e.g., ages or length bins)
+pc <- 10
+
+# CV around mean within pop'n unit (e.g., CV in mean age of school)
+pu_cv <- 0.25
 
 
-# funtion to generate and compute composition
-sim_comp <- function(haul_num, p_sc){
-  
-  # generate log-normal catch
-  data.frame(haul = 1:haul_num, c_h = exp(stats::rnorm(haul_num, 0, 1))) %>% 
-    tidytable::mutate(prop_c = c_h / sum(c_h)) -> prop_c  
-  
-  # determine which school is being sampled (based on relative abundance)
-  sc_smp <- colSums(rmultinom(haul_num, 1, p_sc) * 1:3)
-  
-  # generate samples across hauls
-  rr <- purrr::map(1:haul_num, ~gen_haul_samp(sc_smp[.]))
-  
-  # get haul sample size results
-  do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$samp_h %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "haul") %>% 
-    tidytable::summarise(haul_samp = sum(V2), .by = haul) %>% 
-    tidytable::mutate(prop_s = haul_samp / sum(haul_samp)) -> prop_s
-  
-  prop_s %>% 
-    tidytable::summarise(nss = sum(haul_samp)) -> nss
-  
-  # get generated comp results
-  do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$samp_h %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "haul") %>% 
-    tidytable::rename(cat = V1,
-                      samp_h = V2) %>% 
-    tidytable::left_join(prop_s) %>% 
-    tidytable::left_join(prop_c) %>% 
-    tidytable::summarise(samp_wtd = sum(samp_h * prop_s * prop_c), # weight samples by sample and catch proportion
-                         samp_unwtd = sum(samp_h), # do not weight samples
-                         .by = cat) %>% 
-    tidytable::mutate(samp_p_wtd = samp_wtd / sum(samp_wtd),
-                      samp_p_unwtd = samp_unwtd / sum(samp_unwtd)) %>% 
-    tidytable::select(cat, samp_p_wtd, samp_p_unwtd) -> comp_it
-  
-  list(comp_it = comp_it, nss = nss)
-  
-}
+
+
+
+
+
+
+
+
+
+
+
+# experiment 1: ----
+# do we get unbiased estimates of pop'n composition sampling different schools?
+# what is effect of expansion complexity?
+
+
+## get simulated pop'n ----
+
+sim_popn <- get_popn(d, pu, pc, pu_cv)
 
 
 ## run sim loop ----
-rr <- purrr::map(1:iters, ~sim_comp(haul_num, p_sc))
+rr_sim <- purrr::map(1:iters, ~sim_comp(su_num, sim_popn, su_samp, p_su_samp))
 
-
-do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$comp_it %>% 
-  tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res
-
+do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
+  tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_sim
 
 ## plot results ----
+res_sim %>% 
+  tidytable::pivot_longer(cols = c(samp_p_wtd, samp_p_unwtd)) %>% 
+  tidytable::select(cat, comp_type = name, comp = value) %>% 
+  tidytable::bind_rows(res_sim %>% 
+                         tidytable::filter(sim == sample(1:iters, 1)) %>% 
+                         tidytable::select(-sim) %>% 
+                         tidytable::rename(rand_wtd = samp_p_wtd,
+                                           rand_unwtd = samp_p_unwtd) %>% 
+                         tidytable::pivot_longer(cols = c(rand_wtd, rand_unwtd)) %>% 
+                         tidytable::rename(comp_type = name, comp = value)) %>% 
+  tidytable::bind_rows(sim_popn$p_true %>% 
+                         tidytable::mutate(comp_type = 'true') %>% 
+                         tidytable::rename(comp = p_true)) -> plot_dat
 
-# set up plot data
-rand_row <- sample(1:iters, 1)
-
-data.frame(cat = 1:length(p_true), name = 'true', value = p_true) %>% 
-  tidytable::bind_rows(res %>% 
-                         tidytable::summarise(mean_wtd = mean(samp_p_wtd),
-                                              mean_unwtd = mean(samp_p_unwtd), .by = cat) %>% 
-                         tidytable::pivot_longer(cols = c(mean_wtd, mean_unwtd)) %>% 
-                         tidytable::bind_rows(res %>% 
-                                                tidytable::filter(sim == rand_row) %>% 
-                                                tidytable::select(-sim) %>% 
-                                                tidytable::rename(rand_wtd = samp_p_wtd,
-                                                                  rand_unwtd = samp_p_unwtd) %>% 
-                                                tidytable::pivot_longer(cols = c(rand_wtd, rand_unwtd)))) %>% 
-  tidytable::rename(comp_type = name) %>% 
-  tidytable::mutate(lty = tidytable::case_when(comp_type == 'mean_unwtd' ~ 'solid',
-                                               comp_type == 'mean_wtd' ~ 'dashed',
-                                               comp_type == 'rand_unwtd' ~ 'solid',
-                                               comp_type == 'rand_wtd' ~ 'dashed')) -> plot_dat
-
-# plot
-ggplot(data = plot_dat %>% tidytable::filter(comp_type != 'true'), 
-       aes(x = cat, y = value, col = comp_type)) +
-  geom_line(linewidth = 0.75, aes(linetype = lty)) +
-  geom_point(data = plot_dat %>% tidytable::filter(comp_type == 'true'), size = 2.5) +
+sim_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp)) +
+  geom_bar(data = plot_dat %>% tidytable::filter(comp_type %in% c('true')), stat = 'identity', 
+           aes(fill = comp_type), alpha = 0.5) +
+  geom_boxplot(data = plot_dat %>% tidytable::filter(comp_type %in% c('samp_p_wtd', 'samp_p_unwtd')), 
+               aes(fill = comp_type)) +
+  geom_line(data = plot_dat %>% tidytable::filter(comp_type %in% c('rand_wtd', 'rand_unwtd')) %>% tidytable::left_join(data.frame(comp_type = c('rand_wtd', 'rand_unwtd'), col = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2]))), 
+            aes(x = cat, col = comp_type), linetype = 'dashed') +
+  scico::scale_fill_scico_d(palette = 'roma')  +
+  scale_color_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
   theme_bw() +
-  scico::scale_color_scico_d(palette = 'roma') +
-  guides(linetype = 'none')
+  xlab('category')
 
+ggsave(filename = "sim_popn.png",
+       plot = sim_plot,
+       path = here::here("figs"),
+       width = 6.5,
+       height = 5,
+       units = "in")
+
+
+
+# notes:
 # so long as the schools are represented across the haul samples in proportion to their relative abundance, 
 # the mean across iterations in unbiased, whether weighted or not, so,
 # you don't need to weight by hauls catch even if the number of samples within a haul aren't proportional to catch
