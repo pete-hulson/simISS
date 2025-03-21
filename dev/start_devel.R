@@ -11,7 +11,7 @@ source(here::here('R', 'functions.R'))
 # number of simulation/bootstrap iterations
 iters <- 1000
 
-# number of bootstrap replicates
+# number of bootstrap replicates (for testing whether bootstrap provides unbiased estimate of 'true' iss)
 bs_reps <- 10
 
 ## sampling parameters ----
@@ -28,29 +28,17 @@ p_su_samp <- c(0.9, 0.1)
 
 ## population unit parameters ----
 
-# pop'n exponential decay (e.g., M)
-d <- 0.2
-
 # number of population units sampled (e.g., number of schools/year classes)
-pu <- 3
+pu <- 5
 
 # number of population categories (e.g., ages or length bins)
-pc <- 10
+pc <- 20
 
 # CV around mean within pop'n unit (e.g., CV in mean age of school)
-pu_cv <- 0.25
+pu_cv <- 0.2
 
-
-
-
-
-
-
-
-
-
-
-
+# pop'n exponential decay (e.g., lnM, tied to inverse of number of pop'n categories so that pop'n = 0.01 at largest category)
+d <- log(0.01) / (1 - pc)
 
 # experiment 1: ----
 # do we get unbiased estimates of pop'n composition sampling different schools?
@@ -102,29 +90,62 @@ ggsave(filename = "sim_popn.png",
        height = 5,
        units = "in")
 
-
-
 # notes:
 # so long as the schools are represented across the haul samples in proportion to their relative abundance, 
 # the mean across iterations in unbiased, whether weighted or not, so,
-# you don't need to weight by hauls catch even if the number of samples within a haul aren't proportional to catch
-# however, for any given iteration, the composition resulting from weighted or unweighted comps can be different
+# you don't need to weight by haul's catch even if the number of samples within a haul aren't proportional to catch
+# however, for any given iteration, the composition resulting from weighted or unweighted comps can be different.
+# the uncertainty around weighted comps is larger than unweighted comps
 
-## compute the input sample size ----
+# experiment 2: ----
+# what are the factors that influence input sample size?
+
+## test expansion weighting ----
+
+# number of simulation replicates (for testing iss axes of influence)
+sim_reps <- 1000
+
+# run simulation
+tictoc::tic()
+rr_exp <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
+tictoc::toc()
+
+# unlist results
+do.call(mapply, c(list, rr_exp, SIMPLIFY = FALSE))$iss_sim %>% 
+  tidytable::map_df(., ~as.data.frame(.x), .id = "rep") -> res_exp
+
+# plot results
+res_exp %>% 
+  tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd, mean_nss)) -> plot_dat
+
+exp_plot <- ggplot(data = plot_dat, aes(x = name, y = value, fill = name)) +
+  geom_boxplot(data = plot_dat %>% 
+                 tidytable::filter(name %in% c('iss_wtd', 'iss_unwtd'))) +
+  geom_hline(yintercept = as.numeric(plot_dat %>% 
+              tidytable::filter(name %in% c('mean_nss')) %>% 
+              tidytable::summarise(nss = mean(value))),
+             linewidth = 1,
+             colour = scico::scico(3, palette = 'roma')[3]) +
+  scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+  theme_bw() +
+  xlab(NULL)
+
+ggsave(filename = "exp_sim.png",
+       plot = exp_plot,
+       path = here::here("figs"),
+       width = 6.5,
+       height = 5,
+       units = "in")
 
 
-res %>% 
-  tidytable::left_join(data.frame(cat = 1:length(p_true), p_true = p_true)) %>% 
-  tidytable::summarise(rss_wtd = sum(p_true * (1- p_true)) / sum((samp_p_wtd - p_true) ^ 2),
-                       rss_unwtd = sum(p_true * (1- p_true)) / sum((samp_p_unwtd - p_true) ^ 2),
-                       .by = sim) -> rss_res
+## other things to test: ----
+# comp structure
+# school structure (i.e., cv)
+# number of pop'n units
+# number of categories (i.e., longevity, growth)
 
-rss_res %>% 
-  tidytable::left_join(do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$nss %>% 
-                         tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
-  tidytable::summarise(iss_wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
-                       iss_unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
-                       mean_nss = mean(nss)) -> iss_res
+
+
 
 # weighting reduces the iss, both result in a sim that results in reduction from nss
 
