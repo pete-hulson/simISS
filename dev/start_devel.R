@@ -1,7 +1,7 @@
 
+# load/source stuff ----
 library(tidyverse)
 source(here::here('R', 'functions.R'))
-
 
 
 # set up experiment parameters ----
@@ -10,9 +10,6 @@ source(here::here('R', 'functions.R'))
 
 # number of simulation/bootstrap iterations
 iters <- 1000
-
-# number of bootstrap replicates (for testing whether bootstrap provides unbiased estimate of 'true' iss)
-bs_reps <- 10
 
 ## sampling parameters ----
 
@@ -32,7 +29,7 @@ p_su_samp <- c(0.9, 0.1)
 pu <- 5
 
 # number of population categories (e.g., ages or length bins)
-pc <- 20
+pc <- 15
 
 # CV around mean within pop'n unit (e.g., CV in mean age of school)
 pu_cv <- 0.2
@@ -40,21 +37,26 @@ pu_cv <- 0.2
 # pop'n exponential decay (e.g., lnM, tied to inverse of number of pop'n categories so that pop'n = 0.01 at largest category)
 d <- log(0.01) / (1 - pc)
 
+
 # experiment 1: ----
 # do we get unbiased estimates of pop'n composition sampling different schools?
 # what is effect of expansion complexity?
 
-
 ## get simulated pop'n ----
-
 sim_popn <- get_popn(d, pu, pc, pu_cv)
 
-
 ## run sim loop ----
+tictoc::tic()
 rr_sim <- purrr::map(1:iters, ~sim_comp(su_num, sim_popn, su_samp, p_su_samp))
+runtime_sim <- tictoc::toc()
 
+ # unlist results
 do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
   tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_sim
+
+# save results
+saveRDS(res_sim,
+        file = here::here('output', 'res_sim.rds'))
 
 ## plot results ----
 res_sim %>% 
@@ -90,7 +92,7 @@ ggsave(filename = "sim_popn.png",
        height = 5,
        units = "in")
 
-# notes:
+## notes: ----
 # so long as the schools are represented across the haul samples in proportion to their relative abundance, 
 # the mean across iterations in unbiased, whether weighted or not, so,
 # you don't need to weight by haul's catch even if the number of samples within a haul aren't proportional to catch
@@ -100,49 +102,103 @@ ggsave(filename = "sim_popn.png",
 # experiment 2: ----
 # what are the factors that influence input sample size?
 
-## test expansion weighting ----
+# number of simulation replicates for testing iss axes of influence
+sim_reps <- 2
 
-# number of simulation replicates (for testing iss axes of influence)
-sim_reps <- 1000
+
+## test expansion weighting & pop'n structure ----
 
 # run simulation
 tictoc::tic()
 rr_exp <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
-tictoc::toc()
-
-# unlist results
-do.call(mapply, c(list, rr_exp, SIMPLIFY = FALSE))$iss_sim %>% 
-  tidytable::map_df(., ~as.data.frame(.x), .id = "rep") -> res_exp
+runtime_exp <- tictoc::toc()
 
 # plot results
-res_exp %>% 
-  tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd, mean_nss)) -> plot_dat
-
-exp_plot <- ggplot(data = plot_dat, aes(x = name, y = value, fill = name)) +
-  geom_boxplot(data = plot_dat %>% 
-                 tidytable::filter(name %in% c('iss_wtd', 'iss_unwtd'))) +
-  geom_hline(yintercept = as.numeric(plot_dat %>% 
-              tidytable::filter(name %in% c('mean_nss')) %>% 
-              tidytable::summarise(nss = mean(value))),
-             linewidth = 1,
-             colour = scico::scico(3, palette = 'roma')[3]) +
-  scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
-  theme_bw() +
-  xlab(NULL)
-
-ggsave(filename = "exp_sim.png",
-       plot = exp_plot,
-       path = here::here("figs"),
-       width = 6.5,
-       height = 5,
-       units = "in")
+plot_exp(rr_exp)
 
 
-## other things to test: ----
-# comp structure
-# school structure (i.e., cv)
-# number of pop'n units
-# number of categories (i.e., longevity, growth)
+## test pop'n unit structure (spread around mean category) ----
+
+# set levels of cv
+pu_cv_test <- c(0.05, 0.1, 0.25, 1)
+
+# run simulation
+tictoc::tic()
+rr_cv <- purrr::map(1:sim_reps, ~purrr::map(1:length(pu_cv_test), ~rep_sim(d, pu, pc, pu_cv = pu_cv_test[.], su_num, su_samp, p_su_samp, iters)))
+runtime_cv <- tictoc::toc()
+
+# save & plot results
+plot_sim(rr_cv, 'cv', pu_cv_test, "CV", fact_perc = TRUE)
+
+
+## test number of pop'n units ----
+
+# set numbers of pop'n units
+npu_test <- c(5, 10, 25, 100)
+
+# run simulation
+tictoc::tic()
+rr_npu <- purrr::map(1:sim_reps, ~purrr::map(1:length(npu_test), ~rep_sim(d, pu = npu_test[.], pc, pu_cv, su_num, su_samp, p_su_samp, iters)))
+runtime_npu <- tictoc::toc()
+
+# save & plot results
+plot_sim(rr_npu, 'npu', npu_test, "N_PU")
+
+
+## test number of categories (i.e., longevity, growth) ----
+
+# set numbers of categories
+cat_test <- c(10, 15, 25, 50)
+
+# run simulation
+tictoc::tic()
+rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters)))
+runtime_cat <- tictoc::toc()
+
+# save & plot results
+plot_sim(rr_cat, 'cat', cat_test, "N_Cat")
+
+
+## test number of sampling units (i.e., number of hauls) ----
+
+# set numbers of categories
+su_test <- c(50, 100, 250, 500)
+
+# run simulation
+tictoc::tic()
+rr_su <- purrr::map(1:sim_reps, ~purrr::map(1:length(su_test), ~rep_sim(d, pu, pc, pu_cv, su_num = su_test[.], su_samp, p_su_samp, iters)))
+runtime_su <- tictoc::toc()
+
+# save & plot results
+plot_sim(rr_su, 'su', su_test, "N_SU")
+
+
+## test sample size within sampling units ----
+
+# set numbers of categories
+samp_test <- c(20, 50, 100, 250)
+
+# run simulation
+tictoc::tic()
+rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters)))
+runtime_samp <- tictoc::toc()
+
+# save & plot results
+plot_sim(rr_samp, 'samp', samp_test, "N_Samp")
+
+# calc runtime for 500 simulations
+((runtime_exp$toc - runtime_exp$tic) + 
+    (runtime_cv$toc - runtime_cv$tic) + 
+    (runtime_npu$toc - runtime_npu$tic) + 
+    (runtime_cat$toc - runtime_cat$tic) + 
+    (runtime_su$toc - runtime_su$tic) + 
+    (runtime_samp$toc - runtime_samp$tic)) / (60 * sim_reps) * 250 / 60
+
+
+
+
+
+
 
 
 
@@ -151,7 +207,27 @@ ggsave(filename = "exp_sim.png",
 
 
 
-# experiment 2: can a given realization of a sample give the 'true' iss back? ----
+
+
+
+
+
+
+# (runtime$toc - runtime$tic) / (60 * sim_reps) * 500 / 60 # time for 500 reps in hours
+
+
+
+
+
+
+
+
+
+
+
+
+
+# experiment 3: can a given realization of a sample give the 'true' iss back? ----
 
 # number of bootstrap replicates
 bs_iters <- 10
@@ -302,69 +378,4 @@ purrr::map(1:bs_iters, ~sim_bs(haul_num, iters))
 
 
 
-
-
-
-# base way to do exp 1 ----
-
-samp_it_wtd <- NULL
-samp_it_unwtd_s <- NULL
-samp_it_unwtd_c <- NULL
-samp_it_unwtd <- NULL
-
-for(r in 1:iters){
-  
-  # determine which school is being sampled (based on relative abundance)
-  sc_smp <- colSums(rmultinom(haul_num, 1, p_sc) * 1:3)
-  
-  samp <- NULL
-  c <- NULL
-  
-  for(h in 1:haul_num){
-    if(sc_smp[h] == 1){
-      # generate haul sample size (90% prob that 20, otherwise 10)
-      haul_samp <- if(rbinom(1, 1, 0.9) == 1){20}else{10}
-      # generate multinomial sample based on school composition
-      samp_h <- rmultinom(1, haul_samp, p_s1)
-      # generate random catch based on relative school size in pop'n
-      c_h <- pop_size[1] * runif(1, c_lci, c_uci)
-    }
-    if(sc_smp[h] == 2){
-      haul_samp <- if(rbinom(1, 1, 0.9) == 1){20}else{10}
-      samp_h <- rmultinom(1, haul_samp, p_s2)
-      c_h <- pop_size[2] * runif(1, c_lci, c_uci)
-    }
-    if(sc_smp[h] == 3){
-      haul_samp <- if(rbinom(1, 1, 0.9) == 1){20}else{10}
-      samp_h <- rmultinom(1, haul_samp, p_s3)
-      c_h <- pop_size[3] * runif(1, c_lci, c_uci)
-    }
-    samp <- cbind(samp, samp_h)
-    c <- c(c, c_h)
-  }
-  
-  prop_c <- c / sum(c)
-  prop_s <- colSums(samp) / sum(samp)
-  
-  samp_p_wtd <- rowSums(samp * prop_s * prop_c) / sum(samp * prop_s * prop_c)
-  samp_p_unwtd_s <- rowSums(samp * prop_c) / sum(samp * prop_c)
-  samp_p_unwtd_c <- rowSums(samp * prop_s) / sum(samp * prop_s)
-  samp_p_unwtd <- rowSums(samp) / sum(samp)
-  
-  samp_it_wtd <- rbind(samp_it_wtd, samp_p_wtd)
-  samp_it_unwtd_s <- rbind(samp_it_unwtd_s, samp_p_unwtd_s)
-  samp_it_unwtd_c <- rbind(samp_it_unwtd_c, samp_p_unwtd_c)
-  samp_it_unwtd <- rbind(samp_it_unwtd, samp_p_unwtd)
-  
-}
-
-
-# plot results
-plot(p_true, ylim = c(0, 0.777), ylab = 'Composition')
-lines(colMeans(samp_it_wtd), col = 'darkgreen')
-lines(colMeans(samp_it_unwtd_c), col = 'darkblue')
-
-rand_row <- sample(1:iters, 1)
-lines(samp_it_wtd[rand_row,], col = 'green', lty = 2)
-lines(samp_it_unwtd[rand_row,], col = 'blue', lty = 2)
 
