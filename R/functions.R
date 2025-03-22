@@ -299,7 +299,7 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, fact_perc = FALSE){
 
   .plot_dat %>% 
     tidytable::filter(name != 'mean_nss') %>% 
-    tidytable::left_join(plot_dat %>% 
+    tidytable::left_join(.plot_dat %>% 
                            tidytable::filter(name == 'mean_nss') %>% 
                            tidytable::summarise(nss = mean(value), .by = facet)) -> plot_dat
 
