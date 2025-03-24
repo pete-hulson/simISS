@@ -14,7 +14,7 @@ iters <- 1000
 ## sampling parameters ----
 
 # number of sampling units (e.g., hauls)
-su_num <- 500
+su_num <- 250
 
 # number of samples per sampling unit (e.g., ages/lengths)
 # vector to test differences in number of samples across sampling unit
@@ -32,7 +32,7 @@ pu <- 5
 pc <- 15
 
 # CV around mean within pop'n unit (e.g., CV in mean age of school)
-pu_cv <- 0.2
+pu_cv <- 0.25
 
 # pop'n exponential decay (e.g., lnM, tied to inverse of number of pop'n categories so that pop'n = 0.01 at largest category)
 d <- log(0.01) / (1 - pc)
@@ -43,7 +43,7 @@ d <- log(0.01) / (1 - pc)
 # what is effect of expansion complexity?
 
 ## get simulated pop'n ----
-sim_popn <- get_popn(d, pu, pc, pu_cv)
+sim_popn <- get_popn(d, pu, pc, pu_cv, plot = FALSE)
 
 ## run sim loop ----
 tictoc::tic()
@@ -54,22 +54,26 @@ runtime_sim <- tictoc::toc()
 do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
   tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_sim
 
+examp_sim <- list(sim_popn = sim_popn, res_sim = res_sim)
+
 # save results
-saveRDS(res_sim,
-        file = here::here('output', 'res_sim.rds'))
+saveRDS(examp_sim,
+        file = here::here('output', 'examp_sim.rds'))
 
 ## plot results ----
-res_sim %>% 
+
+### simulation results ----
+examp_sim$res_sim %>% 
   tidytable::pivot_longer(cols = c(samp_p_wtd, samp_p_unwtd)) %>% 
   tidytable::select(cat, comp_type = name, comp = value) %>% 
-  tidytable::bind_rows(res_sim %>% 
+  tidytable::bind_rows(examp_sim$res_sim %>% 
                          tidytable::filter(sim == sample(1:iters, 1)) %>% 
                          tidytable::select(-sim) %>% 
                          tidytable::rename(rand_wtd = samp_p_wtd,
                                            rand_unwtd = samp_p_unwtd) %>% 
                          tidytable::pivot_longer(cols = c(rand_wtd, rand_unwtd)) %>% 
                          tidytable::rename(comp_type = name, comp = value)) %>% 
-  tidytable::bind_rows(sim_popn$p_true %>% 
+  tidytable::bind_rows(examp_sim$sim_popn$p_true %>% 
                          tidytable::mutate(comp_type = 'true') %>% 
                          tidytable::rename(comp = p_true)) -> plot_dat
 
@@ -80,17 +84,42 @@ sim_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp)) +
                aes(fill = comp_type)) +
   geom_line(data = plot_dat %>% tidytable::filter(comp_type %in% c('rand_wtd', 'rand_unwtd')) %>% tidytable::left_join(data.frame(comp_type = c('rand_wtd', 'rand_unwtd'), col = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2]))), 
             aes(x = cat, col = comp_type), linetype = 'dashed') +
+  geom_point(data = plot_dat %>% tidytable::filter(comp_type %in% c('rand_wtd', 'rand_unwtd')) %>% tidytable::left_join(data.frame(comp_type = c('rand_wtd', 'rand_unwtd'), col = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2]))), 
+             shape = 19, size = 1.5, aes(x = cat, col = comp_type)) +
   scico::scale_fill_scico_d(palette = 'roma')  +
   scale_color_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
   theme_bw() +
   xlab('category')
 
-ggsave(filename = "sim_popn.png",
+ggsave(filename = "ex_sim_popn.png",
        plot = sim_plot,
        path = here::here("figs"),
        width = 6.5,
        height = 5,
        units = "in")
+
+
+### generated pop'n results ----
+examp_sim$sim_popn$p_pu %>% 
+  tidytable::bind_rows(examp_sim$sim_popn$p_true %>% 
+                         tidytable::mutate(popn_unit = 'combined') %>% 
+                         tidytable::select(popn_unit, cat, p_pu = p_true)) %>% 
+  tidytable::rename(comp = p_pu) -> plot_dat
+
+popn_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp, fill = popn_unit)) +
+  geom_bar(stat = 'identity') +
+  facet_wrap(~popn_unit, ncol = 1) +
+  theme_bw() +
+  xlab('category') +
+  scico::scale_fill_scico_d(palette = 'roma')
+
+ggsave(filename = "ex_gen_popn.png",
+       plot = popn_plot,
+       path = here::here("figs"),
+       width = 6.5,
+       height = 5,
+       units = "in")
+
 
 ## notes: ----
 # so long as the schools are represented across the haul samples in proportion to their relative abundance, 
