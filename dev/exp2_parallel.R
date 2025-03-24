@@ -42,9 +42,6 @@ d <- log(0.01) / (1 - pc)
 # experiment 2: ----
 # what are the factors that influence input sample size?
 
-# number of simulation replicates for testing iss axes of influence
-sim_reps <- 2
-
 ## test expansion weighting & pop'n structure ----
 test1 <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   #start timer
@@ -134,6 +131,9 @@ test6 <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters){
 }
 
 ## run tests in parallel ----
+
+# number of simulation replicates for testing iss axes of influence
+sim_reps <- 1000
 
 # set up parallel fcn
 run_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
