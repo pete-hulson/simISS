@@ -231,7 +231,7 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
 #' 
-#' @return list of input sample size (by expansion complexity) and nominal sample size (nss)
+#' @return list of input sample size (by expansion complexity and selectivity form) and nominal sample size (nss)
 #' 
 #' @export
 #' 
@@ -252,7 +252,7 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
     tidytable::left_join(sim_popn$p_true) %>% 
     tidytable::summarise(rss_wtd = sum(p_true * (1- p_true)) / sum((samp_p_wtd - p_true) ^ 2),
                          rss_unwtd = sum(p_true * (1- p_true)) / sum((samp_p_unwtd - p_true) ^ 2),
-                         .by = sim) -> rss_sim
+                         .by = c(sim, selex_type)) -> rss_sim
   
   # compute input sample size & nominal sample size
   rss_sim %>% 
@@ -261,8 +261,9 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
     tidytable::summarise(iss_wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
                          iss_unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
                          mean_nss = mean(nss),
-                         popn_strctr = do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$popn_strctr[[1]]) -> iss_sim
-  
+                         .by = selex_type) %>% 
+    tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$popn_strctr[[1]]) -> iss_sim
+
   list(iss_sim = iss_sim)
   
 }
@@ -401,7 +402,7 @@ bs_samp_event <- function(samp_ev){
   # bootstrap the sample realization
 
   # get number of sampling units
-  su_num <- length(samp_ev$N_su$samp_event)
+  su_num <- length(unique(samp_ev$N_su$samp_event))
   
   # bootsrap realized sampling units (e.g., hauls)
   bs_su <- data.frame(samp_event = sample(1:su_num, su_num, replace = TRUE)) %>% 
@@ -409,25 +410,26 @@ bs_samp_event <- function(samp_ev){
   
   # bootstrap samples within sampling unit (e.g., ages/lengths)
   bs_n_su <- tidytable::expand_grid(bs_samp_event = 1:su_num,
-                                    cat = 1:pc) %>% 
+                                    cat = 1:pc,
+                                    selex_type = samp_ev$nss$selex_type) %>% 
     tidytable::left_join(bs_su %>% 
                            tidytable::left_join(samp_ev$n_su) %>% 
-                           tidytable::select(bs_samp_event = id, cat, samp) %>% 
+                           tidytable::select(bs_samp_event = id, selex_type, cat, samp) %>% 
                            tidytable::uncount(samp) %>% 
-                           tidytable::mutate(cat = sample(cat, .N, replace = TRUE), .by = bs_samp_event) %>% 
-                           tidytable::summarize(bs_samp = .N, .by = c(bs_samp_event, cat))) %>% 
+                           tidytable::mutate(cat = sample(cat, .N, replace = TRUE), .by = c(bs_samp_event, selex_type)) %>% 
+                           tidytable::summarize(bs_samp = .N, .by = c(bs_samp_event, selex_type, cat))) %>% 
     tidytable::mutate(bs_samp = case_when(is.na(bs_samp) ~ 0, .default = bs_samp))
   
   # compute proportion of sample size across sampling units
   bs_n_su %>% 
-    tidytable::summarise(bs_samp_se = sum(bs_samp), .by = bs_samp_event) %>% 
-    tidytable::mutate(bs_p_samp_se = bs_samp_se / sum(bs_samp_se)) -> bs_p_samp_su
+    tidytable::summarise(bs_samp_se = sum(bs_samp), .by = c(bs_samp_event, selex_type)) %>% 
+    tidytable::mutate(bs_p_samp_se = bs_samp_se / sum(bs_samp_se), .by = selex_type) -> bs_p_samp_su
   
   # calculate abundance proportions
   bs_su %>% 
     tidytable::left_join(samp_ev$N_su) %>% 
-    tidytable::select(bs_samp_event = id, bs_N_su = N_su) %>% 
-    tidytable::mutate(bs_prop_N = bs_N_su / sum(bs_N_su)) -> bs_N_su
+    tidytable::select(bs_samp_event = id, bs_N_su = N_su, selex_type) %>% 
+    tidytable::mutate(bs_prop_N = bs_N_su / sum(bs_N_su), .by = selex_type) -> bs_N_su
   
   # compute bootstrap composition
   bs_n_su %>% 
@@ -437,17 +439,18 @@ bs_samp_event <- function(samp_ev){
     tidytable::left_join(bs_p_samp_su) %>% 
     tidytable::summarise(bs_samp_wtd = sum(bs_samp * bs_p_samp_se * bs_prop_N), # weight samples
                          bs_samp_unwtd = sum(bs_samp), # do not weight samples
-                         .by = cat) %>% 
+                         .by = c(cat, selex_type)) %>% 
     # compute compositions
     tidytable::mutate(bs_samp_p_wtd = bs_samp_wtd / sum(bs_samp_wtd),
-                      bs_samp_p_unwtd = bs_samp_unwtd / sum(bs_samp_unwtd)) %>% 
-    tidytable::select(cat, bs_samp_p_wtd, bs_samp_p_unwtd) -> bs_comp
+                      bs_samp_p_unwtd = bs_samp_unwtd / sum(bs_samp_unwtd), .by = selex_type) %>% 
+    tidytable::select(cat, selex_type, bs_samp_p_wtd, bs_samp_p_unwtd) -> bs_comp
   
   # calculate the bootstrap realized sample size
   rss_bs <- bs_comp %>% 
     tidytable::left_join(samp_ev$comp) %>% 
     tidytable::summarise(bs_rss_wtd = sum(samp_p_wtd * (1- samp_p_wtd)) / sum((bs_samp_p_wtd - samp_p_wtd) ^ 2),
-                         bs_rss_unwtd = sum(samp_p_unwtd * (1- samp_p_unwtd)) / sum((bs_samp_p_unwtd - samp_p_unwtd) ^ 2))
+                         bs_rss_unwtd = sum(samp_p_unwtd * (1- samp_p_unwtd)) / sum((bs_samp_p_unwtd - samp_p_unwtd) ^ 2),
+                         .by = selex_type)
   
   list(rss_bs = rss_bs, bs_comp = bs_comp)
 }
@@ -481,7 +484,8 @@ bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   samp_ev$comp %>% 
     tidytable::left_join(sim_popn$p_true) %>% 
     tidytable::summarise(rss_wtd = sum(p_true * (1- p_true)) / sum((samp_p_wtd - p_true) ^ 2),
-                         rss_unwtd = sum(p_true * (1- p_true)) / sum((samp_p_unwtd - p_true) ^ 2)) -> rss_se
+                         rss_unwtd = sum(p_true * (1- p_true)) / sum((samp_p_unwtd - p_true) ^ 2),
+                         .by = selex_type) -> rss_se
   
   # run bootstrap of sampling event
   rr_bs <- purrr::map(1:iters, ~bs_samp_event(samp_ev))
