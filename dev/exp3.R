@@ -1,6 +1,7 @@
 
 # load/source stuff ----
 library(tidyverse)
+library(future)
 source(here::here('R', 'functions.R'))
 
 
@@ -14,7 +15,7 @@ iters <- 1000
 ## sampling parameters ----
 
 # number of sampling units (e.g., hauls)
-su_num <- 500
+su_num <- 250
 
 # number of samples per sampling unit (e.g., ages/lengths)
 # vector to test differences in number of samples across sampling unit
@@ -26,13 +27,13 @@ p_su_samp <- c(0.9, 0.1)
 ## population unit parameters ----
 
 # number of population units sampled (e.g., number of schools/year classes)
-pu <- 5
+pu <- 25
 
 # number of population categories (e.g., ages or length bins)
 pc <- 15
 
 # CV around mean within pop'n unit (e.g., CV in mean age of school)
-pu_cv <- 0.2
+pu_cv <- 0.25
 
 # pop'n exponential decay (e.g., lnM, tied to inverse of number of pop'n categories so that pop'n = 0.01 at largest category)
 d <- log(0.01) / (1 - pc)
@@ -43,145 +44,59 @@ d <- log(0.01) / (1 - pc)
 # number of bootstrap replicates
 bs_iters <- 10
 
-## get a sample realization ----
-
-# generate log-normal catch
-c_realize <- data.frame(haul = 1:haul_num, c_h = exp(stats::rnorm(haul_num, 0, 1))) 
-
-# determine which school is being sampled (based on relative abundance)
-sc_smp <- colSums(rmultinom(haul_num, 1, p_sc) * 1:3)
-
-# generate a realization of samples across hauls
-rr <- purrr::map(1:haul_num, ~gen_haul_samp(sc_smp[.]))
-
-do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$samp_h %>% 
-  tidytable::map_df(., ~as.data.frame(.x), .id = "haul") %>% 
-  tidytable::rename(cat = V1,
-                    samp_h = V2) -> haul_realize
-
-# compute the realization composition
-haul_realize %>% 
-  tidytable::left_join(haul_realize %>% 
-                         tidytable::summarise(haul_samp = sum(samp_h), .by = haul) %>% 
-                         tidytable::mutate(prop_s = haul_samp / sum(haul_samp))) %>% 
-  tidytable::left_join(c_realize %>% 
-                         tidytable::mutate(prop_c = c_h / sum(c_h))) %>% 
-  tidytable::summarise(samp_wtd = sum(samp_h * prop_s * prop_c), # weight samples by sample and catch proportion
-                       samp_unwtd = sum(samp_h), # do not weight samples
-                       .by = cat) %>% 
-  tidytable::mutate(real_p_wtd = samp_wtd / sum(samp_wtd),
-                    real_p_unwtd = samp_unwtd / sum(samp_unwtd)) %>% 
-  tidytable::select(cat, real_p_wtd, real_p_unwtd) -> p_realize
 
 
-## define bootstrap functions ----
+#start timer
+tictoc::tic()
+# run simulation
+rr_bs <- purrr::map(1:bs_iters, ~bs_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
+# end timer
+runtime <- tictoc::toc()
 
-bs_haul_samp <- function(haul_num,
-                         haul_realize,
-                         c_realize){
-  
-  # bootstrap hauls
-  bs_h <- data.frame(haul = sample(1:haul_num, haul_num, replace = TRUE)) %>% 
-    tidytable::mutate(id = .I)
-  
-  # get bootstrap haul sample size results
-  bs_h %>% 
-    tidytable::left_join(haul_realize) %>% 
-    tidytable::summarise(haul_samp = sum(samp_h), .by = id) %>% 
-    tidytable::mutate(prop_s = haul_samp / sum(haul_samp)) %>% 
-    tidytable::rename(haul = id) -> bs_prop_s
-  
-  bs_prop_s %>% 
-    tidytable::summarise(nss = sum(haul_samp)) -> bs_nss
-  
-  # get catch proportions
-  bs_h %>% 
-    tidytable::left_join(c_realize) %>% 
-    tidytable::mutate(prop_c = c_h / sum(c_h)) %>% 
-    tidytable::select(haul = id, c_h, prop_c) -> bs_prop_c
-  
-  # get bootstrap comp results
-  bs_h %>% 
-    tidytable::left_join(haul_realize) %>% 
-    tidytable::select(haul = id, cat, samp_h) %>% 
-    tidytable::left_join(bs_prop_s) %>% 
-    tidytable::left_join(bs_prop_c) %>% 
-    tidytable::summarise(samp_wtd = sum(samp_h * prop_s * prop_c), # weight samples by sample and catch proportion
-                         samp_unwtd = sum(samp_h), # do not weight samples
-                         .by = cat) %>% 
-    tidytable::mutate(samp_p_wtd = samp_wtd / sum(samp_wtd),
-                      samp_p_unwtd = samp_unwtd / sum(samp_unwtd)) %>% 
-    tidytable::select(cat, samp_p_wtd, samp_p_unwtd) -> bs_comp_it
-  
-  list(bs_comp_it = bs_comp_it, bs_nss = bs_nss)
-}
-
-sim_bs <- function(haul_num, iters){
-  
-  # get a sample realization
-  
-  # generate log-normal catch
-  c_realize <- data.frame(haul = 1:haul_num, c_h = exp(stats::rnorm(haul_num, 0, 1))) 
-  
-  # determine which school is being sampled (based on relative abundance)
-  sc_smp <- colSums(rmultinom(haul_num, 1, p_sc) * 1:3)
-  
-  # generate a realization of samples across hauls
-  rr <- purrr::map(1:haul_num, ~gen_haul_samp(sc_smp[.]))
-  
-  do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$samp_h %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "haul") %>% 
-    tidytable::rename(cat = V1,
-                      samp_h = V2) -> haul_realize
-  
-  # compute the realization composition
-  haul_realize %>% 
-    tidytable::left_join(haul_realize %>% 
-                           tidytable::summarise(haul_samp = sum(samp_h), .by = haul) %>% 
-                           tidytable::mutate(prop_s = haul_samp / sum(haul_samp))) %>% 
-    tidytable::left_join(c_realize %>% 
-                           tidytable::mutate(prop_c = c_h / sum(c_h))) %>% 
-    tidytable::summarise(samp_wtd = sum(samp_h * prop_s * prop_c), # weight samples by sample and catch proportion
-                         samp_unwtd = sum(samp_h), # do not weight samples
-                         .by = cat) %>% 
-    tidytable::mutate(real_p_wtd = samp_wtd / sum(samp_wtd),
-                      real_p_unwtd = samp_unwtd / sum(samp_unwtd)) %>% 
-    tidytable::select(cat, real_p_wtd, real_p_unwtd) -> p_realize
-  
-  # bootstrap the realization
-  rr <- purrr::map(1:iters, ~bs_haul_samp(haul_num, haul_realize, c_realize))
-  
-  
-  do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$bs_comp_it %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_bs
-  
-  res_bs %>% 
-    tidytable::left_join(p_realize) %>% 
-    tidytable::summarise(rss_wtd = sum(real_p_wtd * (1- real_p_wtd)) / sum((samp_p_wtd - real_p_wtd) ^ 2),
-                         rss_unwtd = sum(real_p_unwtd * (1- real_p_unwtd)) / sum((samp_p_unwtd - real_p_unwtd) ^ 2),
-                         .by = sim) -> rss_res_bs
-  
-  rss_res_bs %>% 
-    tidytable::left_join(do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$bs_nss %>% 
-                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
-    tidytable::summarise(iss_wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
-                         iss_unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
-                         mean_nss = mean(nss)) -> iss_res_bs
-  
-  list(iss_res_bs = iss_res_bs)
-}
-
-## run bootstrap ----
-
-purrr::map(1:bs_iters, ~sim_bs(haul_num, iters))
+(runtime$toc - runtime$tic) / (60 * bs_iters) * 1000 / 60
 
 
 
 
+# unlist results
+do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$rss_se %>% 
+  tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> rss_se
+do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$iss_bs %>% 
+  tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> iss_bs
+
+res_bs <- list(rss_se = rss_se, iss_bs = iss_bs)
+
+# save results
+saveRDS(res_bs,
+        file = here::here('output', paste0('res_bs.rds')))
+
+# plot results
+rss_se %>% 
+  tidytable::pivot_longer(cols = c(rss_wtd, rss_unwtd)) %>% 
+  tidytable::rename(sim_rss = value) %>% 
+  tidytable::mutate(weighting = case_when(name == 'rss_wtd' ~ TRUE, .default = FALSE)) %>% 
+  tidytable::select(-name) %>% 
+  tidytable::left_join(iss_bs %>% 
+                         tidytable::pivot_longer(cols = c(bs_iss_wtd, bs_iss_unwtd)) %>% 
+                         tidytable::rename(bs_iss = value) %>% 
+                         tidytable::mutate(weighting = case_when(name == 'bs_iss_wtd' ~ TRUE, .default = FALSE)) %>% 
+                         tidytable::select(-name)) -> plot_data
 
 
+bs_plot <- ggplot(data = plot_data, aes(x = sim_rss, y = bs_iss, col = weighting)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0) +
+  scico::scale_color_scico_d(palette = 'roma') +
+  xlab("RSS for sampling event of generated population") +
+  ylab("ISS for bootstrap of sampling event") +
+  theme_bw()
 
-
+ggsave(filename = "bs_test.png",
+       plot = bs_plot,
+       path = here::here("figs"),
+       width = 6.5,
+       height = 5,
+       units = "in")
 
 
 
