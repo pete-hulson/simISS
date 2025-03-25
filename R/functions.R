@@ -5,84 +5,126 @@
 #' @param pc number of population categories (e.g., ages or lengths)
 #' @param pu_cv CV in mean category within a population unit (e.g., spread in ages around mean age within a given school)
 #' @param plot boolean, whether to output plot of generated pop'n (default = TRUE)
+#' @param plot_name if plot desired, add name to write plot as (default = 'gen_popn')
 #' 
 #' @return List of population unit compositions (p_pu), relative abundance of population units (p_popn), 
 #' and the combined population composition (p_true)
 #' 
 #' @export
 #' 
-get_popn <- function(d, pu, pc, pu_cv, plot = TRUE){
+get_popn <- function(d, pu, pc, pu_cv, plot = TRUE, plot_name = 'gen_popn'){
   
+  # step 1: set up pop'n with exponential decay adjusted by selex ----
+  # uniform selex
+  popn_u <- data.frame(cat = 1:pc, popn = exp(-(1:pc - 1) * d), selex_type = 'uniform')
+  # asympotic selex
+  # generate category at 50% selex (restricted to first 25% of categories)
+  c_50 <- stats::runif(1, 1, 0.25 * pc)
+  # generate slope (so that not knife edged)
+  delta <- runif(1, 0.5, 2)
+  # compute selectivity
+  selex_a <- data.frame(cat = 1:pc, selex = 1 / (1 + exp(-(1:pc - c_50) / delta)))
+  # adjust pop'n
+  popn_a <- popn_u %>% 
+    tidytable::left_join(selex_a) %>% 
+    tidytable::mutate(popn = popn * selex,
+                      selex_type = 'asymptotic') %>% 
+    tidytable::select(-selex)
+  # dome-shaped selex
+  # generate category at max selex (restricted to 2nd quantile of categories)
+  c_max <- stats::runif(1, 0.25 * pc, 0.5 * pc)
+  # generate slope (so that not knife edged)
+  delta <- runif(1, 2, 5)
+  # calculate power parameter
+  p <- 0.5 * (sqrt(c_max ^ 2 + (4 * delta ^ 2)) - c_max)
+  # compute selectivity
+  selex_d <- data.frame(cat = 1:pc, selex = (1:pc / c_max)^(c_max / p) * exp( (c_max - 1:pc) / p))
+  # adjust pop'n
+  popn_d <- popn_u %>% 
+    tidytable::left_join(selex_d) %>% 
+    tidytable::mutate(popn = popn * selex,
+                      selex_type = 'dome-shaped') %>% 
+    tidytable::select(-selex)
+  # put all together
+  popn <- popn_u %>% 
+    tidytable::bind_rows(popn_a) %>% 
+    tidytable::bind_rows(popn_d)
+  selex <- data.frame(cat = 1:pc, selex = 1, selex_type = 'uniform') %>% 
+    tidytable::bind_rows(data.frame(selex_a, selex_type = 'asymptotic')) %>% 
+    tidytable::bind_rows(data.frame(selex_d, selex_type = 'dome-shaped'))
+  
+  
+  # step 2: set up pop'n units ----
   # get mean category for pop'n unit (e.g., mean age of school)
   mu_cat <- sample(1:pc, pu, replace = TRUE)
   
-  # set up pop'n units
+  # set up pop'n units with mean category and cv
   p_pu <- purrr::map(1:pu, ~data.frame(cat = 1:pc, p_pu = dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv) / sum(dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv)))) %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "popn_unit")
-  
-  # set up pop'n with decay
-  popn <- data.frame(cat = 1:pc, popn = exp(-(1:pc - 1) * d))
-  
+    tidytable::map_df(., ~as.data.frame(.x), .id = "popn_unit") %>% 
+    tidytable::left_join(selex) %>% 
+    tidytable::select(popn_unit, cat, p_pu, selex_type)
+
   # get pop'n unit relative proportions
   p_popn <- p_pu %>% 
     tidytable::left_join(popn) %>% 
-    tidytable::summarise(rel_popn = sum(p_pu * popn), .by = popn_unit) %>% 
-    tidytable::mutate(p_popn = rel_popn / sum(rel_popn)) %>% 
-    tidytable::select(popn_unit, rel_popn, p_popn)
+    tidytable::summarise(rel_popn = sum(p_pu * popn), .by = c(popn_unit, selex_type)) %>% 
+    tidytable::mutate(p_popn = rel_popn / sum(rel_popn), .by = selex_type) %>% 
+    tidytable::select(popn_unit, rel_popn, p_popn, selex_type)
   
   # get 'true' pop'n composition
   p_true <- p_pu %>% 
     tidytable::left_join(p_popn) %>% 
-    tidytable::summarise(popn_tot = sum(p_pu * rel_popn), .by = c(cat)) %>% 
-    tidytable::mutate(p_true = popn_tot / sum(popn_tot)) %>% 
-    tidytable::select(cat, p_true)
+    tidytable::summarise(popn_tot = sum(p_pu * rel_popn), .by = c(cat, selex_type)) %>% 
+    tidytable::mutate(p_true = popn_tot / sum(popn_tot), .by = selex_type) %>% 
+    tidytable::select(cat, p_true, selex_type)
   
-  # qualitatively classify population unit structure as 'recruitment pulse', 'multimodal', or 'unimodal'
+  # classify population unit structure as 'recruitment pulse', 'multimodal', or 'unimodal'
   p_true %>% 
     tidytable::left_join(p_true %>% 
                            tidytable::mutate(cat = cat + 1) %>% 
                            tidytable::rename(p_true_1 = p_true)) %>% 
     tidytable::drop_na() %>% 
     tidytable::mutate(test = p_true - p_true_1) %>% 
-    tidytable::select(cat, test) -> test
+    tidytable::select(cat, test, selex_type) -> .test
   
-  test %>% 
-    tidytable::left_join(test %>% 
+  .test %>% 
+    tidytable::left_join(.test %>% 
                            tidytable::mutate(cat = cat + 1) %>% 
                            tidytable::rename(test_1 = test)) %>% 
     tidytable::drop_na() %>% 
-    tidytable::filter(test < 0 & test_1 > 0) -> mode_test
-  
-  as.numeric(p_true %>% 
-               tidytable::filter(cat <= 2) %>% 
-               tidytable::summarise(rec_test = sum(p_true))) -> rec_test
-  
-  if(rec_test > 0.45){
-    popn_strctr <- 'recruitment pulse'
-  } else{
-    if(length(mode_test$cat) == 1){
-      popn_strctr <- 'unimodal'
-    } else{
-      popn_strctr <- 'multimodal'
-    }
-  }
-  
+    tidytable::filter(test < 0 & test_1 > 0) %>% 
+    tidytable::summarise(mode_test = .N, .by = selex_type) %>% 
+    tidytable::left_join(p_true %>% 
+                           tidytable::filter(cat <= 2) %>% 
+                           tidytable::summarise(rec_test = sum(p_true), .by = selex_type)) -> test
+  popn_strctr <- test %>% 
+    tidytable::mutate(popn_strctr = case_when(rec_test > 0.45 ~ 'recruitment pulse',
+                                              rec_test <= 0.45 ~ case_when(mode_test > 1 ~ 'multimodal', 
+                                                                           .default = 'unimodal'))) %>% 
+    tidytable::select(selex_type, popn_strctr)
+
   # if desired, plot generated pop'n
   if(isTRUE(plot)){
     p_pu %>% 
-    tidytable::bind_rows(p_true %>% 
-                           tidytable::mutate(popn_unit = 'combined') %>% 
-                           tidytable::select(popn_unit, cat, p_pu = p_true)) %>% 
-      tidytable::rename(comp = p_pu) -> plot_dat
-    
+      tidytable::left_join(popn) %>% 
+      tidytable::mutate(comp = p_pu * popn, .by = c(popn_unit, selex_type)) %>% 
+      tidytable::select(popn_unit, cat, selex_type, comp) %>% 
+      tidytable::bind_rows(p_pu %>% 
+                             tidytable::left_join(popn) %>% 
+                             tidytable::mutate(comp = p_pu * popn, .by = c(selex_type)) %>%  
+                             tidytable::mutate(popn_unit = 'combined')) -> plot_dat
+
     popn_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp, fill = popn_unit)) +
       geom_bar(stat = 'identity') +
-      facet_wrap(~popn_unit, ncol = 1) +
+      facet_grid(popn_unit ~ selex_type, scale = 'free_y') +
       theme_bw() +
-      xlab('category') +
-      scico::scale_fill_scico_d(palette = 'roma')
+      labs(fill = "Population unit") +
+      xlab('Category') +
+      ylab('Relative population size') +
+      scico::scale_fill_scico_d(palette = 'roma') +
+      scale_x_discrete(guide = guide_axis(angle = 90))
     
-    ggsave(filename = "gen_popn.png",
+    ggsave(filename = paste0(plot_name, ".png"),
            plot = popn_plot,
            path = here::here("figs"),
            width = 6.5,
@@ -106,14 +148,24 @@ get_popn <- function(d, pu, pc, pu_cv, plot = TRUE){
 #' 
 sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
 
-  # generate sampling unit category samples
-  # define the sampling event
-  data.frame(samp_event = 1:su_num) %>% 
-    # determine which population unit is being sampled (based on relative abundance)
-    data.frame(popn_unit = sample(x = sim_popn$p_popn$popn_unit, 
-                                  size = su_num, 
-                                  replace = TRUE, 
-                                  prob = sim_popn$p_popn$p_popn)) %>% 
+  # step 1: generate sampling unit samples ----
+  # determine which population unit is being sampled (based on relative abundance)
+  num_selex <- length(sim_popn$popn_strctr$selex_type)
+  samp_pu <- NULL
+  for(i in 1:num_selex){
+    rand <- data.frame(samp_event = 1:su_num,
+                       popn_unit = sample(x = unique(sim_popn$p_popn$popn_unit), 
+                                          size = su_num, 
+                                          replace = TRUE, 
+                                          prob = sim_popn$p_popn$p_popn[sim_popn$p_popn$selex_type == sim_popn$popn_strctr$selex_type[i]])) %>% 
+      tidytable::mutate(selex_type = sim_popn$popn_strctr$selex_type[i])
+    
+    samp_pu <- samp_pu %>% 
+      tidytable::bind_rows(rand)
+  }
+  # define the sampling events and join sampled pop'n units
+  tidytable::expand_grid(samp_event = 1:su_num, selex_type = sim_popn$popn_strctr$selex_type) %>% 
+    tidytable::left_join(samp_pu) %>% 
     # join population unit composition
     tidytable::left_join(sim_popn$p_pu) %>% 
     # generate samples within categories based on population unit composition across sampling events
@@ -121,21 +173,33 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
                                               # generate sampling unit number of samples
                                               sample(x = su_samp, size = 1, replace = TRUE, prob = p_su_samp),
                                               p_pu),
-                      .by = samp_event) -> n_su
+                      .by = c(samp_event, selex_type)) -> n_su
+  # generate log-normal sampling unit abundance and calculate proportions
+  samp_N <- NULL
+  for(i in 1:num_selex){
+    rand <- data.frame(samp_event = 1:su_num,
+                       N_su = exp(stats::rnorm(su_num, 0, 1))) %>% 
+      tidytable::mutate(selex_type = sim_popn$popn_strctr$selex_type[i])
+    
+    samp_N <- samp_N %>% 
+      tidytable::bind_rows(rand)
+  }
   
+  # step 2: compute weightings ----
   # compute proportion of sample size across sampling units
   n_su %>% 
-    tidytable::summarise(samp_se = sum(samp), .by = samp_event) %>% 
-    tidytable::mutate(p_samp_se = samp_se / sum(samp_se)) -> p_samp_su
+    tidytable::summarise(samp_se = sum(samp), .by = c(samp_event, selex_type)) %>% 
+    tidytable::mutate(p_samp_se = samp_se / sum(samp_se), .by = selex_type) -> p_samp_su
 
-  # generate log-normal sampling unit abundance and calculate proportions
-  data.frame(samp_event = 1:su_num, N_su = exp(stats::rnorm(su_num, 0, 1))) %>% 
-    tidytable::mutate(prop_N = N_su / sum(N_su)) -> N_su 
+  # calculate proportions of sampling unit abundance
+  samp_N %>% 
+    tidytable::mutate(prop_N = N_su / sum(N_su), .by = selex_type) -> N_su 
 
   # compute total sample size
   n_su %>% 
-    tidytable::summarise(nss = sum(samp)) -> nss
+    tidytable::summarise(nss = sum(samp), .by = selex_type) -> nss
   
+  # step 3: compute generated comps ----
   # get generated composition results
   n_su %>% 
     # join sampling event abundance
@@ -144,11 +208,11 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
     tidytable::left_join(p_samp_su) %>% 
     tidytable::summarise(samp_wtd = sum(samp * p_samp_se * prop_N), # weight samples
                          samp_unwtd = sum(samp), # do not weight samples
-                         .by = cat) %>% 
+                         .by = c(cat, selex_type)) %>% 
     # compute compositions
     tidytable::mutate(samp_p_wtd = samp_wtd / sum(samp_wtd),
-                      samp_p_unwtd = samp_unwtd / sum(samp_unwtd)) %>% 
-    tidytable::select(cat, samp_p_wtd, samp_p_unwtd) -> comp
+                      samp_p_unwtd = samp_unwtd / sum(samp_unwtd), .by = selex_type) %>% 
+    tidytable::select(cat, samp_p_wtd, samp_p_unwtd, selex_type) -> comp
 
 
   # output

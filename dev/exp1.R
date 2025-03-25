@@ -43,7 +43,7 @@ d <- log(0.01) / (1 - pc)
 # what is effect of expansion complexity?
 
 ## get simulated pop'n ----
-sim_popn <- get_popn(d, pu, pc, pu_cv, plot = FALSE)
+sim_popn <- get_popn(d, pu, pc, pu_cv)
 
 ## run sim loop ----
 tictoc::tic()
@@ -63,29 +63,29 @@ saveRDS(examp_sim,
 ## plot results ----
 
 ### simulation results ----
-examp_sim$res_sim %>% 
+res_sim %>% 
   tidytable::pivot_longer(cols = c(samp_p_wtd, samp_p_unwtd)) %>% 
-  tidytable::select(cat, comp_type = name, comp = value) %>% 
-  tidytable::bind_rows(examp_sim$res_sim %>% 
-                         tidytable::filter(sim == sample(1:iters, 1)) %>% 
-                         tidytable::select(-sim) %>% 
-                         tidytable::rename(rand_wtd = samp_p_wtd,
-                                           rand_unwtd = samp_p_unwtd) %>% 
-                         tidytable::pivot_longer(cols = c(rand_wtd, rand_unwtd)) %>% 
-                         tidytable::rename(comp_type = name, comp = value)) %>% 
-  tidytable::bind_rows(examp_sim$sim_popn$p_true %>% 
+  tidytable::select(cat, comp_type = name, comp = value, selex_type) %>% 
+  tidytable::bind_rows(sim_popn$p_true %>% 
                          tidytable::mutate(comp_type = 'true') %>% 
                          tidytable::rename(comp = p_true)) -> plot_dat
+# add a random comp
+res_sim %>% 
+  tidytable::filter(sim == sample(1:iters, 1)) %>% 
+  tidytable::select(-sim) %>% 
+  tidytable::rename(rand_wtd = samp_p_wtd,
+                    rand_unwtd = samp_p_unwtd) %>% 
+  tidytable::pivot_longer(cols = c(rand_wtd, rand_unwtd)) %>% 
+  tidytable::rename(comp_type = name, comp = value) -> rand_sim
 
 sim_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp)) +
   geom_bar(data = plot_dat %>% tidytable::filter(comp_type %in% c('true')), stat = 'identity', 
            aes(fill = comp_type), alpha = 0.5) +
   geom_boxplot(data = plot_dat %>% tidytable::filter(comp_type %in% c('samp_p_wtd', 'samp_p_unwtd')), 
                aes(fill = comp_type)) +
-  geom_line(data = plot_dat %>% tidytable::filter(comp_type %in% c('rand_wtd', 'rand_unwtd')) %>% tidytable::left_join(data.frame(comp_type = c('rand_wtd', 'rand_unwtd'), col = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2]))), 
-            aes(x = cat, col = comp_type), linetype = 'dashed') +
-  geom_point(data = plot_dat %>% tidytable::filter(comp_type %in% c('rand_wtd', 'rand_unwtd')) %>% tidytable::left_join(data.frame(comp_type = c('rand_wtd', 'rand_unwtd'), col = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2]))), 
-             shape = 19, size = 1.5, aes(x = cat, col = comp_type)) +
+  geom_line(data = rand_sim, aes(x = cat, y = comp, col = comp_type), linetype = 'dashed') +
+  geom_point(data = rand_sim, size = 1.5, col = 'black', aes(x = cat, y = comp, shape = comp_type)) +
+  facet_wrap(~selex_type, ncol = 1) +
   scico::scale_fill_scico_d(palette = 'roma')  +
   scale_color_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
   theme_bw() +
