@@ -98,29 +98,6 @@ ggsave(filename = "ex_sim_popn.png",
        height = 5,
        units = "in")
 
-
-### generated pop'n results ----
-examp_sim$sim_popn$p_pu %>% 
-  tidytable::bind_rows(examp_sim$sim_popn$p_true %>% 
-                         tidytable::mutate(popn_unit = 'combined') %>% 
-                         tidytable::select(popn_unit, cat, p_pu = p_true)) %>% 
-  tidytable::rename(comp = p_pu) -> plot_dat
-
-popn_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp, fill = popn_unit)) +
-  geom_bar(stat = 'identity') +
-  facet_wrap(~popn_unit, ncol = 1) +
-  theme_bw() +
-  xlab('category') +
-  scico::scale_fill_scico_d(palette = 'roma')
-
-ggsave(filename = "ex_gen_popn.png",
-       plot = popn_plot,
-       path = here::here("figs"),
-       width = 6.5,
-       height = 5,
-       units = "in")
-
-
 ## notes: ----
 # so long as the schools are represented across the haul samples in proportion to their relative abundance, 
 # the mean across iterations in unbiased, whether weighted or not, so,
