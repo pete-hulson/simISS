@@ -60,8 +60,7 @@ do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$rss_se %>%
 do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$iss_bs %>% 
   tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> iss_bs
 do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$popn_strctr %>% 
-  tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
-  tidytable::rename(popn_strctr = .x) -> popn_strctr
+  tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> popn_strctr
 
 res_bs <- list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = popn_strctr)
 
@@ -71,58 +70,45 @@ saveRDS(res_bs,
 
 ## plot results ----
 
-rss_se %>%  
+true_iss <- rss_se %>%  
   tidytable::left_join(popn_strctr) %>% 
-  tidytable::summarise(iss_wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
-                       iss_unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
-                       .by = popn_strctr) %>% 
+  tidytable::summarise(Wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
+                       Unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
+                       .by = c(selex_type, popn_strctr)) %>% 
   tidytable::bind_rows(rss_se %>%  
                          tidytable::left_join(popn_strctr) %>% 
                          tidytable::mutate(popn_strctr = 'combined') %>% 
-                         tidytable::summarise(iss_wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
-                                              iss_unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
-                                              .by = popn_strctr)) %>% 
-  tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd)) %>% 
+                         tidytable::summarise(Wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
+                                              Unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
+                                              .by = c(selex_type, popn_strctr))) %>% 
+  tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
   tidytable::rename(type = name, iss = value) %>% 
-  tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined'))) -> true_iss
+  tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined')))
   
-iss_bs %>%  
+bs_iss <- iss_bs %>%  
   tidytable::left_join(popn_strctr) %>%
-  tidytable::rename(iss_wtd = bs_iss_wtd, iss_unwtd = bs_iss_unwtd) %>% 
+  tidytable::rename(Wtd = bs_iss_wtd, Unwtd = bs_iss_unwtd) %>% 
   tidytable::bind_rows(iss_bs %>%  
                          tidytable::left_join(popn_strctr) %>%
                          tidytable::mutate(popn_strctr = 'combined') %>% 
-                         tidytable::rename(iss_wtd = bs_iss_wtd, iss_unwtd = bs_iss_unwtd)) %>% 
-  tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd)) %>% 
+                         tidytable::rename(Wtd = bs_iss_wtd, Unwtd = bs_iss_unwtd)) %>% 
+  tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
   tidytable::rename(type = name, iss = value) %>% 
-  tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined'))) -> bs_iss
+  tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined')))
 
-# plot for all pop'n structures
-bs_plot <- ggplot(data = bs_iss, aes(x = type, y = iss, fill = type)) + 
+bs_plot_popn <- ggplot(data = bs_iss, aes(x = type, y = iss, fill = type)) + 
   geom_boxplot() +
-  geom_point(data = true_iss, shape = 24, size = 3.777, fill = 'white', aes(x = type, y = iss)) +
-  facet_wrap(~popn_strctr, nrow = 1) +
+  geom_point(data = true_iss, shape = 24, size = 2, fill = 'white', aes(x = type, y = iss)) +
+  facet_grid(selex_type ~ popn_strctr) +
   scico::scale_color_scico_d(palette = 'roma') +
   scico::scale_fill_scico_d(palette = 'roma') +
-  theme_bw()
+  theme_bw() +
+  guides(fill = 'none') +
+  ylab("ISS") +
+  xlab("Composition expansion type")
 
 ggsave(filename = "bs_test_popn.png",
        plot = bs_plot_popn,
-       path = here::here("figs"),
-       width = 6.5,
-       height = 5,
-       units = "in")
-
-# plot for combined pop'n structures
-bs_plot_comb <- ggplot(data = bs_iss %>% tidytable::filter(popn_strctr == 'combined'), aes(x = type, y = iss, fill = type)) + 
-  geom_boxplot() +
-  geom_point(data = true_iss %>% tidytable::filter(popn_strctr == 'combined'), shape = 24, size = 3.777, fill = 'white', aes(x = type, y = iss)) +
-  scico::scale_color_scico_d(palette = 'roma') +
-  scico::scale_fill_scico_d(palette = 'roma') +
-  theme_bw()
-
-ggsave(filename = "bs_test_comb.png",
-       plot = bs_plot_comb,
        path = here::here("figs"),
        width = 6.5,
        height = 5,

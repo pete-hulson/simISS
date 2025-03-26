@@ -497,7 +497,8 @@ bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   # calculate bootstrap iss
   iss_bs <- res_bs %>%     
     tidytable::summarise(bs_iss_wtd = psych::harmonic.mean(bs_rss_wtd, zero = FALSE),
-                         bs_iss_unwtd = psych::harmonic.mean(bs_rss_unwtd, zero = FALSE))
+                         bs_iss_unwtd = psych::harmonic.mean(bs_rss_unwtd, zero = FALSE),
+                         .by = selex_type)
   
   list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = samp_ev$popn_strctr)
 }
