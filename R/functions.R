@@ -295,24 +295,28 @@ plot_exp <- function(rr_exp){
 
   # plot results by population structure
   plot_dat <- res_exp %>% 
-    tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd, mean_nss)) %>% 
+    tidytable::rename(Wtd = iss_wtd, Unwtd = iss_unwtd) %>% 
+    tidytable::pivot_longer(cols = c(Wtd, Unwtd, mean_nss)) %>% 
     tidytable::bind_rows(res_exp %>% 
-                           tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd, mean_nss)) %>% 
+                           tidytable::rename(Wtd = iss_wtd, Unwtd = iss_unwtd) %>% 
+                           tidytable::pivot_longer(cols = c(Wtd, Unwtd, mean_nss)) %>% 
                            tidytable::mutate(popn_strctr = 'combined')) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined')))
   
   plot <- ggplot(data = plot_dat, aes(x = name, y = value, fill = name)) +
     geom_boxplot(data = plot_dat %>% 
-                   tidytable::filter(name %in% c('iss_wtd', 'iss_unwtd'))) +
+                   tidytable::filter(name %in% c('Wtd', 'Unwtd'))) +
     geom_hline(yintercept = as.numeric(plot_dat %>% 
                                          tidytable::filter(name %in% c('mean_nss')) %>% 
                                          tidytable::summarise(nss = mean(value))),
                linewidth = 1,
                colour = scico::scico(3, palette = 'roma')[3]) +
-    facet_wrap(~popn_strctr, nrow = 1) +
+    facet_grid(selex_type ~ popn_strctr) +
     scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
     theme_bw() +
-    xlab(NULL)
+    xlab('Composition expansion method') +
+    ylab('Input Sample Size (ISS)') +
+    guides(fill = 'none')
   
   ggsave(filename = "exp_sim.png",
          plot = plot,

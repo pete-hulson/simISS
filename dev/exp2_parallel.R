@@ -48,7 +48,7 @@ test1 <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
   tictoc::tic()
   # run simulation
   rr_exp <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
-  # plot results
+  # save & plot results
   plot_exp(rr_exp)
   # end timer
   runtime <- tictoc::toc()

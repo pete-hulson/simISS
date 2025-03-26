@@ -42,8 +42,7 @@ d <- log(0.01) / (1 - pc)
 # what are the factors that influence input sample size?
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 2
-
+sim_reps <- 10
 
 ## test expansion weighting & pop'n structure ----
 
@@ -52,7 +51,10 @@ tictoc::tic()
 rr_exp <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
 runtime_exp <- tictoc::toc()
 
-# plot results
+# calc runtime test
+(runtime_exp$toc - runtime_exp$tic) / (60 * sim_reps) * 1000 / 60
+
+# save & plot results
 plot_exp(rr_exp)
 
 
