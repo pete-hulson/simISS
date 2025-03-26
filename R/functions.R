@@ -162,17 +162,6 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
   selex_type <- sim_popn$popn_strctr$selex_type
   num_selex <- length(selex_type)
   samp_pu <- NULL
-  # for(i in 1:num_selex){
-  #   rand <- data.frame(samp_event = 1:su_num,
-  #                      popn_unit = sample(x = unique(sim_popn$p_popn$popn_unit), 
-  #                                         size = su_num, 
-  #                                         replace = TRUE, 
-  #                                         prob = sim_popn$p_popn$p_popn[sim_popn$p_popn$selex_type == sim_popn$popn_strctr$selex_type[i]])) %>% 
-  #     tidytable::mutate(selex_type = sim_popn$popn_strctr$selex_type[i])
-  #   
-  #   samp_pu <- samp_pu %>% 
-  #     tidytable::bind_rows(rand)
-  # }
   for(i in 1:num_selex){
     rand <- data.frame(samp_event = 1:su_num,
                        popn_unit = sample(x = unique(sim_popn$p_pu$popn_unit), 
@@ -186,16 +175,6 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
   }
   
   # define the sampling events and join sampled pop'n units
-  # tidytable::expand_grid(samp_event = 1:su_num, selex_type = sim_popn$popn_strctr$selex_type) %>% 
-  #   tidytable::left_join(samp_pu) %>% 
-  #   # join population unit composition
-  #   tidytable::left_join(sim_popn$p_pu) %>% 
-  #   # generate samples within categories based on population unit composition across sampling events
-  #   tidytable::mutate(samp = stats::rmultinom(1, 
-  #                                             # generate sampling unit number of samples
-  #                                             sample(x = su_samp, size = 1, replace = TRUE, prob = p_su_samp),
-  #                                             p_pu),
-  #                     .by = c(samp_event, selex_type)) -> n_su
   tidytable::expand_grid(samp_event = 1:su_num, selex_type = sim_popn$popn_strctr$selex_type) %>% 
     tidytable::left_join(samp_pu) %>% 
     # join population unit composition
@@ -208,21 +187,7 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
                       .by = c(samp_event, selex_type)) -> n_su
 
   # generate log-normal sampling unit abundance and calculate proportions
-  # samp_N <- NULL
-  # for(i in 1:num_selex){
-  #   rand <- data.frame(samp_event = 1:su_num,
-  #                      N_su = exp(stats::rnorm(su_num, 0, 1))) %>% 
-  #     tidytable::mutate(selex_type = selex_type[i])
-  #   
-  #   samp_N <- samp_N %>% 
-  #     tidytable::bind_rows(rand)
-  # }
-  
   samp_pu %>% 
-    # tidytable::left_join(sim_popn$p_pu %>% 
-    #                        tidytable::mutate(Z_pu = N_pu - mean(N_pu), .by = selex_type) %>% 
-    #                        tidytable::select(popn_unit, selex_type, Z_pu)) %>% 
-    # tidytable::mutate(N_su = exp(stats::rnorm(1, Z_pu, abs(Z_pu))), .by = samp_event) %>% 
     tidytable::mutate(N_su = exp(stats::rnorm(1, 0, 1)), .by = samp_event) %>% 
     tidytable::select(samp_event, N_su, selex_type) -> samp_N
   
