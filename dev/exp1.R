@@ -43,64 +43,64 @@ d <- log(0.01) / (1 - pc)
 # what is effect of expansion complexity?
 
 ## get simulated pop'n ----
-sim_popn <- get_popn(d, pu, pc, pu_cv)
+# note: sample pop'n category sampling without replacement for example plots
+sim_popn <- get_popn(d, pu, pc, pu_cv, replace_pc = FALSE, plot_name = 'exp1_popn')
 
 ## run sim loop ----
 tictoc::tic()
-rr_sim <- purrr::map(1:iters, ~sim_comp(su_num, sim_popn, su_samp, p_su_samp))
-runtime_sim <- tictoc::toc()
+rr_exp1 <- purrr::map(1:iters, ~sim_comp(su_num, sim_popn, su_samp, p_su_samp))
+runtime_exp1 <- tictoc::toc()
 
  # unlist results
-do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
+do.call(mapply, c(list, rr_exp1, SIMPLIFY = FALSE))$comp %>% 
   tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_sim
 
-examp_sim <- list(sim_popn = sim_popn, res_sim = res_sim)
+exp1_res <- list(sim_popn = sim_popn, res_sim = res_sim)
 
 # save results
-saveRDS(examp_sim,
-        file = here::here('output', 'examp_sim.rds'))
+saveRDS(exp1_res,
+        file = here::here('output', 'exp1_res.rds'))
 
 ## plot results ----
 
 ### simulation results ----
 res_sim %>% 
-  tidytable::pivot_longer(cols = c(samp_p_wtd, samp_p_unwtd)) %>% 
-  tidytable::select(cat, comp_type = name, comp = value, selex_type) %>% 
+  tidytable::rename(Wtd = samp_p_wtd, Unwtd = samp_p_unwtd) %>% 
+  tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
+  tidytable::select(cat, 'Expansion type' = name, comp = value, selex_type) %>% 
   tidytable::bind_rows(sim_popn$p_true %>% 
-                         tidytable::mutate(comp_type = 'true') %>% 
+                         tidytable::mutate(comp_type = 'True') %>% 
                          tidytable::rename(comp = p_true)) -> plot_dat
 # add a random comp
 res_sim %>% 
   tidytable::filter(sim == sample(1:iters, 1)) %>% 
   tidytable::select(-sim) %>% 
-  tidytable::rename(rand_wtd = samp_p_wtd,
-                    rand_unwtd = samp_p_unwtd) %>% 
-  tidytable::pivot_longer(cols = c(rand_wtd, rand_unwtd)) %>% 
-  tidytable::rename(comp_type = name, comp = value) -> rand_sim
+  tidytable::pivot_longer(cols = c(samp_p_wtd, samp_p_unwtd)) %>% 
+  tidytable::mutate(shape = case_when(name == 'samp_p_wtd' ~ 24,
+                                      name == 'samp_p_unwtd' ~ 25),
+                    name = case_when(name == 'samp_p_wtd' ~ 'Random Wtd',
+                                     name == 'samp_p_unwtd' ~ 'Random Unwtd')) %>% 
+  tidytable::select(cat, selex_type, 'Expansion type' = name, comp = value, shape) -> rand_sim
 
-sim_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp)) +
-  geom_bar(data = plot_dat %>% tidytable::filter(comp_type %in% c('true')), stat = 'identity', 
-           aes(fill = comp_type), alpha = 0.5) +
-  geom_boxplot(data = plot_dat %>% tidytable::filter(comp_type %in% c('samp_p_wtd', 'samp_p_unwtd')), 
-               aes(fill = comp_type)) +
-  geom_line(data = rand_sim, aes(x = cat, y = comp, col = comp_type), linetype = 'dashed') +
-  geom_point(data = rand_sim, size = 1.5, col = 'black', aes(x = cat, y = comp, shape = comp_type)) +
-  facet_wrap(~selex_type, ncol = 1) +
-  scico::scale_fill_scico_d(palette = 'roma')  +
-  scale_color_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = comp)) +
+  geom_bar(data = plot_dat %>% tidytable::filter(comp_type %in% c('True')), stat = 'identity', 
+           aes(col = comp_type), alpha = 0) +
+  geom_boxplot(data = plot_dat %>% tidytable::filter(`Expansion type` %in% c('Wtd', 'Unwtd')), 
+               aes(fill = `Expansion type`), position = position_dodge(0.8), width = 0.5, alpha = 0.7) +
+  geom_line(data = rand_sim, linewidth = 0.25, aes(x = cat, y = comp, col = `Expansion type`)) +
+  # geom_point(data = rand_sim, fill = 'white', shape = rand_sim$shape, aes(x = cat, y = comp)) +
+  facet_wrap(~selex_type, ncol = 1, scales = 'free_y') +
+  scale_color_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2], scico::scico(3, palette = 'roma')[3]))  +
+  scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
   theme_bw() +
-  xlab('category')
+  xlab('Category') +
+  ylab('Composition') +
+  guides(col = 'none')
 
-ggsave(filename = "ex_sim_popn.png",
-       plot = sim_plot,
+ggsave(filename = "exp1_sim.png",
+       plot = plot,
        path = here::here("figs"),
        width = 6.5,
        height = 5,
        units = "in")
 
-## notes: ----
-# so long as the schools are represented across the haul samples in proportion to their relative abundance, 
-# the mean across iterations in unbiased, whether weighted or not, so,
-# you don't need to weight by haul's catch even if the number of samples within a haul aren't proportional to catch
-# however, for any given iteration, the composition resulting from weighted or unweighted comps can be different.
-# the uncertainty around weighted comps is larger than unweighted comps

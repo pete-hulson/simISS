@@ -4,6 +4,7 @@
 #' @param pu number of population units (e.g., number of schools)
 #' @param pc number of population categories (e.g., ages or lengths)
 #' @param pu_cv CV in mean category within a population unit (e.g., spread in ages around mean age within a given school)
+#' @param replace_pc boolean, whether to sample mean pop'n category for pop'n unit with replacement or not (default = TRUE)
 #' @param plot boolean, whether to output plot of generated pop'n (default = TRUE)
 #' @param plot_name if plot desired, add name to write plot as (default = 'gen_popn')
 #' 
@@ -12,7 +13,7 @@
 #' 
 #' @export
 #' 
-get_popn <- function(d, pu, pc, pu_cv, plot = TRUE, plot_name = 'gen_popn'){
+get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name = 'gen_popn'){
   
   # step 1: set up pop'n with exponential decay adjusted by selex ----
   
@@ -55,7 +56,7 @@ get_popn <- function(d, pu, pc, pu_cv, plot = TRUE, plot_name = 'gen_popn'){
   # step 2: set up pop'n units ----
   
   # get mean category for pop'n unit (e.g., mean age of school)
-  mu_cat <- sample(1:pc, pu, replace = TRUE)
+  mu_cat <- sample(1:pc, pu, replace = replace_pc)
   
   # set up pop'n unit composition with normal distribution
   ptwid_pu <- purrr::map(1:pu, ~data.frame(cat = 1:pc, p_dist = dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv) / sum(dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv)))) %>% 
