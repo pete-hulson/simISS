@@ -42,7 +42,7 @@ d <- log(0.01) / (1 - pc)
 # what are the factors that influence input sample size?
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 10
+sim_reps <- 1000
 
 ## test expansion weighting & pop'n structure ----
 

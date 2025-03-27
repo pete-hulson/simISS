@@ -64,7 +64,13 @@ test2 <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters){
   # run simulation
   rr_cv <- purrr::map(1:sim_reps, ~purrr::map(1:length(pu_cv_test), ~rep_sim(d, pu, pc, pu_cv = pu_cv_test[.], su_num, su_samp, p_su_samp, iters)))
   # save & plot results
-  plot_sim(rr_cv, 'cv', pu_cv_test, "CV", fact_perc = TRUE)
+  plot_sim(rr = rr_cv, 
+           plot_name = 'cv', 
+           test_vec = pu_cv_test, 
+           test_name = "CV",
+           test_lab = 'Population unit CV around mean category',
+           plot_nss = TRUE,
+           fact_perc = TRUE)
   # end timer
   runtime <- tictoc::toc()
   return(runtime)
@@ -75,11 +81,15 @@ test3 <- function(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   #start timer
   tictoc::tic()
   # set numbers of pop'n units
-  npu_test <- c(10, 25, 100, 250)
+  npu_test <- c(25, 100, 250, 1000)
   # run simulation
   rr_npu <- purrr::map(1:sim_reps, ~purrr::map(1:length(npu_test), ~rep_sim(d, pu = npu_test[.], pc, pu_cv, su_num, su_samp, p_su_samp, iters)))
   # save & plot results
-  plot_sim(rr_npu, 'npu', npu_test, "N_PU")
+  plot_sim(rr = rr_npu, 
+           plot_name = 'Npu', 
+           test_vec = npu_test, 
+           test_name = "N",
+           test_lab = 'Number of population units')
   # end timer
   runtime <- tictoc::toc()
   return(runtime)
@@ -94,7 +104,11 @@ test4 <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters){
   # run simulation
   rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters)))
   # save & plot results
-  plot_sim(rr_cat, 'cat', cat_test, "N_Cat")
+  plot_sim(rr = rr_cat, 
+           plot_name = 'Ncat', 
+           test_vec = cat_test,
+           test_name = "N",
+           test_lab = 'Number of categories within the population')
   # end timer
   runtime <- tictoc::toc()
   return(runtime)
@@ -109,7 +123,11 @@ test5 <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters){
   # run simulation
   rr_su <- purrr::map(1:sim_reps, ~purrr::map(1:length(su_test), ~rep_sim(d, pu, pc, pu_cv, su_num = su_test[.], su_samp, p_su_samp, iters)))
   # save & plot results
-  plot_sim(rr_su, 'su', su_test, "N_SU")
+  plot_sim(rr = rr_su, 
+           plot_name = 'Nsu', 
+           test_vec = su_test, 
+           test_name = "N",
+           test_lab = 'Number of sampling units')
   # end timer
   runtime <- tictoc::toc()
   return(runtime)
@@ -124,7 +142,11 @@ test6 <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, plot_name){
   # run simulation
   rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters)))
   # save & plot results
-  plot_sim(rr_samp, plot_name, samp_test, "N_Samp")
+  plot_sim(rr = rr_samp, 
+           plot_name = plot_name, 
+           test_vec = samp_test, 
+           test_name = "n",
+           test_lab = 'Number of samples within a sampling unit')
   # end timer
   runtime <- tictoc::toc()
   return(runtime)
@@ -137,7 +159,7 @@ sim_reps <- 10
 
 # set up parallel fcn
 run_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
-  runtime_exp %<-% test1(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  # runtime_exp %<-% test1(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
   runtime_cv %<-% test2(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters) %seed% TRUE
   runtime_npu %<-% test3(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
   runtime_cat %<-% test4(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
@@ -161,13 +183,8 @@ run_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
 future::plan(sequential)
 runtime_test <- tictoc::toc()
 
-
-# calc runtime for 500 simulations
+# calc runtime for 1000 simulations
 (runtime_test$toc - runtime_test$tic) / (60 * sim_reps) * 1000 / 60
-
-
-
-
 
 
 

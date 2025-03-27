@@ -316,7 +316,7 @@ plot_exp <- function(rr){
     ylab('Input Sample Size (ISS)') +
     guides(fill = 'none')
   
-  ggsave(filename = "exp_sim.png",
+  ggsave(filename = "exp2_base.png",
          plot = plot,
          path = here::here("figs"),
          width = 6.5,
