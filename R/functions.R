@@ -61,14 +61,14 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
   # set up pop'n unit composition with normal distribution
   ptwid_pu <- purrr::map(1:pu, ~data.frame(cat = 1:pc, p_dist = dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv) / sum(dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv)))) %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "popn_unit")
-
+  
   # set up pop'n units taking into account seelx and pop'n size
   p_cpu <- ptwid_pu %>% 
     tidytable::left_join(popn) %>% 
     tidytable::mutate(N_cpu = p_dist * popn,
                       p_cpu = N_cpu / sum(N_cpu), .by = c(popn_unit, selex_type)) %>% 
     tidytable::select(popn_unit, cat, N_cpu, p_cpu, selex_type)
-
+  
   # get pop'n unit relative proportions to use for resampling pop'n units
   p_pu <- ptwid_pu %>% 
     tidytable::left_join(popn) %>% 
@@ -77,12 +77,12 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
   
   
   # step 3: get 'true' pop'n composition ----
-
+  
   p_true <- ptwid_pu %>% 
     tidytable::left_join(popn) %>% 
     tidytable::summarise(N_c = sum(p_dist * popn), .by = c(cat, selex_type)) %>% 
     tidytable::mutate(p_true = N_c / sum(N_c), .by = selex_type)
-
+  
   
   # classify population unit structure as 'recruitment pulse', 'multimodal', or 'unimodal'
   p_true %>% 
@@ -112,17 +112,17 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
                                               rec_test <= 0.45 ~ case_when(mode_test > 1 ~ 'multimodal', 
                                                                            .default = 'unimodal'))) %>% 
     tidytable::select(selex_type, popn_strctr)
-
+  
   # if desired, plot generated pop'n
   if(isTRUE(plot)){
-
+    
     p_cpu %>% 
       tidytable::rename(N = N_cpu) %>% 
       tidytable::select(-p_cpu) %>% 
       tidytable::bind_rows(p_true %>% 
                              tidytable::mutate(popn_unit = 'combined') %>% 
                              tidytable::select(popn_unit, cat, N = N_c, selex_type)) -> plot_dat
-
+    
     popn_plot <- ggplot(data = plot_dat, aes(x = as.factor(cat), y = N, fill = popn_unit)) +
       geom_bar(stat = 'identity') +
       facet_grid(popn_unit ~ selex_type, scale = 'free_y') +
@@ -157,7 +157,7 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
 #' @export
 #' 
 sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
-
+  
   # step 1: generate sampling unit samples ----
   # determine which population unit is being sampled for each selex type (based on relative abundance)
   selex_type <- sim_popn$popn_strctr$selex_type
@@ -186,7 +186,7 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
                                               sample(x = su_samp, size = 1, replace = TRUE, prob = p_su_samp),
                                               p_cpu),
                       .by = c(samp_event, selex_type)) -> n_su
-
+  
   # generate log-normal sampling unit abundance and calculate proportions
   samp_pu %>% 
     tidytable::mutate(N_su = exp(stats::rnorm(1, 0, 1)), .by = samp_event) %>% 
@@ -198,11 +198,11 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
   n_su %>% 
     tidytable::summarise(samp_se = sum(samp), .by = c(samp_event, selex_type)) %>% 
     tidytable::mutate(p_samp_se = samp_se / sum(samp_se), .by = selex_type) -> p_samp_su
-
+  
   # calculate proportions of sampling unit abundance
   samp_N %>% 
     tidytable::mutate(prop_N = N_su / sum(N_su), .by = selex_type) -> N_su 
-
+  
   # compute total sample size
   n_su %>% 
     tidytable::summarise(nss = sum(samp), .by = selex_type) -> nss
@@ -221,8 +221,8 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
     tidytable::mutate(samp_p_wtd = samp_wtd / sum(samp_wtd),
                       samp_p_unwtd = samp_unwtd / sum(samp_unwtd), .by = selex_type) %>% 
     tidytable::select(cat, samp_p_wtd, samp_p_unwtd, selex_type) -> comp
-
-
+  
+  
   # output
   list(comp = comp, nss = nss, popn_strctr = sim_popn$popn_strctr, n_su = n_su, N_su = N_su)
   
@@ -254,7 +254,7 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   # unlist results
   do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_sim
-
+  
   # compute realized sample size
   res_sim %>% 
     tidytable::left_join(sim_popn$p_true) %>% 
@@ -271,51 +271,48 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
                          mean_nss = mean(nss),
                          .by = selex_type) %>% 
     tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$popn_strctr[[1]]) -> iss_sim
-
+  
   list(iss_sim = iss_sim)
   
 }
 
 #' function to save & plot results for expansion and pop'n structure effects
 #' 
-#' @param rr_exp list of results from simulation
+#' @param rr list of results from simulation
 #' 
 #' @return saves dataframe results to 'output' folder and plots to 'figs' folder
 #' 
 #' @export
 #' 
-plot_exp <- function(rr_exp){
+plot_exp <- function(rr){
   
   # unlist results
-  do.call(mapply, c(list, rr_exp, SIMPLIFY = FALSE))$iss_sim %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "rep") -> res_exp
+  do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$iss_sim %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "rep") -> res
   
   # save results
-  saveRDS(res_exp,
-          file = here::here('output', 'res_exp.rds'))
-
+  saveRDS(res,
+          file = here::here('output', 'exp2_test1.rds'))
+  
   # plot results by population structure
-  plot_dat <- res_exp %>% 
+  plot_dat <- res %>% 
     tidytable::rename(Wtd = iss_wtd, Unwtd = iss_unwtd) %>% 
     tidytable::pivot_longer(cols = c(Wtd, Unwtd, mean_nss)) %>% 
-    tidytable::bind_rows(res_exp %>% 
-                           tidytable::rename(Wtd = iss_wtd, Unwtd = iss_unwtd) %>% 
-                           tidytable::pivot_longer(cols = c(Wtd, Unwtd, mean_nss)) %>% 
-                           tidytable::mutate(popn_strctr = 'combined')) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined')))
   
-  plot <- ggplot(data = plot_dat, aes(x = name, y = value, fill = name)) +
-    geom_boxplot(data = plot_dat %>% 
-                   tidytable::filter(name %in% c('Wtd', 'Unwtd'))) +
+  plot <- ggplot(data = plot_dat %>% 
+                   tidytable::filter(name %in% c('Wtd', 'Unwtd')), aes(x = selex_type, y = value, fill = name)) +
+    geom_boxplot(alpha = 0.7) +
     geom_hline(yintercept = as.numeric(plot_dat %>% 
                                          tidytable::filter(name %in% c('mean_nss')) %>% 
                                          tidytable::summarise(nss = mean(value))),
                linewidth = 1,
                colour = scico::scico(3, palette = 'roma')[3]) +
-    facet_grid(selex_type ~ popn_strctr) +
+    facet_grid(name ~ popn_strctr) +
     scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
     theme_bw() +
-    xlab('Composition expansion method') +
+    scale_x_discrete(guide = guide_axis(angle = 45)) +
+    xlab('Selectivity shape') +
     ylab('Input Sample Size (ISS)') +
     guides(fill = 'none')
   
@@ -325,6 +322,7 @@ plot_exp <- function(rr_exp){
          width = 6.5,
          height = 5,
          units = "in")
+  
 }
 
 #' function to save & plot results for simulations of tested effects
@@ -333,13 +331,15 @@ plot_exp <- function(rr_exp){
 #' @param plot_name character string of name to save plot as
 #' @param test_vec vector of tested values for simulation
 #' @param test_name character string to name the test being conducted in plots
+#' @param test_lab character string to name the x-axis in plot
+#' @param plot_nss boolean, to plot the sample size as a horizontal line
 #' @param fact_perc boolean, whether the facet factor for plotting should be converted to percent or not
 #' 
 #' @return saves dataframe results to 'output' folder and plots to 'figs' folder
 #' 
 #' @export
 #' 
-plot_sim <- function(rr, plot_name, test_vec, test_name, fact_perc = FALSE){
+plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FALSE, fact_perc = FALSE){
   
   # unlist results
   if(isTRUE(fact_perc)){
@@ -370,30 +370,43 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, fact_perc = FALSE){
   
   # plot source simulated results by population structure
   .plot_dat <- res %>% 
-    tidytable::bind_rows(res %>% 
-                           tidytable::mutate(popn_strctr = 'combined')) %>% 
-    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined')))
-
+    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
+  
   .plot_dat %>% 
     tidytable::filter(name != 'mean_nss') %>% 
     tidytable::left_join(.plot_dat %>% 
                            tidytable::filter(name == 'mean_nss') %>% 
-                           tidytable::summarise(nss = mean(value), .by = facet)) -> plot_dat
-
-  plot <- ggplot(data = plot_dat, aes(x = name, y = value, fill = name)) +
-    geom_boxplot(data = plot_dat %>% 
-                   tidytable::filter(name %in% c('iss_wtd', 'iss_unwtd'))) +
-    geom_hline(data = plot_dat,
-               aes(yintercept = nss),
-               linewidth = 1,
-               colour = scico::scico(3, palette = 'roma')[3]) +
-    facet_grid(popn_strctr ~ facet) +
-    scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
-    scale_x_discrete(guide = guide_axis(angle = 45)) +
-    theme_bw() +
-    xlab(NULL)
+                           tidytable::summarise(nss = mean(value), .by = facet)) %>% 
+    tidytable::mutate(name = case_when(name == 'iss_wtd' ~ 'Wtd',
+                                       name == 'iss_unwtd' ~ 'Unwtd')) -> plot_dat
+  if(isTRUE(plot_nss)){
+    plot <- ggplot(data = plot_dat, aes(x = facet, y = value, fill = name)) +
+      geom_boxplot(alpha = 0.7) +
+      geom_hline(data = plot_dat,
+                 aes(yintercept = nss),
+                 linewidth = 1,
+                 colour = scico::scico(3, palette = 'roma')[3]) +
+      facet_grid(name ~ popn_strctr, scales = 'free_y') +
+      scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+      theme_bw() +
+      xlab(test_lab) +
+      scale_x_discrete(guide = guide_axis(angle = 45)) +
+      ylab('Input Sample Size (ISS)') +
+      guides(fill = 'none')
+  } else{
+    plot <- ggplot(data = plot_dat, aes(x = facet, y = value, fill = name)) +
+      geom_boxplot(alpha = 0.7) +
+      facet_grid(name ~ popn_strctr, scales = 'free_y') +
+      scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+      theme_bw() +
+      xlab(test_lab) +
+      scale_x_discrete(guide = guide_axis(angle = 45)) +
+      ylab('Input Sample Size (ISS)') +
+      guides(fill = 'none')
+    
+  }
   
-  ggsave(filename = paste0(plot_name, "_sim.png"),
+  ggsave(filename = paste0('exp2_', plot_name, '.png'),
          plot = plot,
          path = here::here("figs"),
          width = 6.5,
@@ -412,7 +425,7 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, fact_perc = FALSE){
 bs_samp_event <- function(samp_ev){
   
   # bootstrap the sample realization
-
+  
   # get number of sampling units
   su_num <- length(unique(samp_ev$N_su$samp_event))
   
