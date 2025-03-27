@@ -366,7 +366,7 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
   
   # save results
   saveRDS(res,
-          file = here::here('output', paste0('res_', plot_name, '.rds')))
+          file = here::here('output', paste0('exp2_', plot_name, '.rds')))
   
   # plot source simulated results by population structure
   .plot_dat <- res %>% 
@@ -528,6 +528,295 @@ bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = samp_ev$popn_strctr)
 }
 
+#' function to test expansion weighting, selectivity, & pop'n structure
+#' 
+#' @export
+#' 
+test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+  #start timer
+  tictoc::tic()
+  # run simulation
+  rr_exp <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
+  # save & plot results
+  plot_exp(rr_exp)
+  # end timer
+  runtime <- tictoc::toc()
+  return(runtime)
+}
+
+#' function to test pop'n unit structure (spread around mean category determined by CV)
+#' 
+#' @export
+#' 
+test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters){
+  #start timer
+  tictoc::tic()
+  # set levels of cv
+  pu_cv_test <- c(0.1, 0.25, 1, 100)
+  # run simulation
+  rr_cv <- purrr::map(1:sim_reps, ~purrr::map(1:length(pu_cv_test), ~rep_sim(d, pu, pc, pu_cv = pu_cv_test[.], su_num, su_samp, p_su_samp, iters)))
+  # save & plot results
+  plot_sim(rr = rr_cv, 
+           plot_name = 'cv', 
+           test_vec = pu_cv_test, 
+           test_name = "CV",
+           test_lab = 'Population unit CV around mean category',
+           plot_nss = TRUE,
+           fact_perc = TRUE)
+  # end timer
+  runtime <- tictoc::toc()
+  return(runtime)
+}
+
+#' function to test number of pop'n units
+#' 
+#' @export
+#' 
+test_PU <- function(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+  #start timer
+  tictoc::tic()
+  # set numbers of pop'n units
+  npu_test <- c(25, 100, 250, 500)
+  # run simulation
+  rr_npu <- purrr::map(1:sim_reps, ~purrr::map(1:length(npu_test), ~rep_sim(d, pu = npu_test[.], pc, pu_cv, su_num, su_samp, p_su_samp, iters)))
+  # save & plot results
+  plot_sim(rr = rr_npu, 
+           plot_name = 'Npu', 
+           test_vec = npu_test, 
+           test_name = "PU",
+           test_lab = 'Number of population units')
+  # end timer
+  runtime <- tictoc::toc()
+  return(runtime)
+}
+
+#' function to test number of categories (i.e., longevity, growth)
+#' 
+#' @export
+#' 
+test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters){
+  #start timer
+  tictoc::tic()
+  # set numbers of categories
+  cat_test <- c(10, 15, 25, 50)
+  # run simulation
+  rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters)))
+  # save & plot results
+  plot_sim(rr = rr_cat, 
+           plot_name = 'Ncat', 
+           test_vec = cat_test,
+           test_name = "C",
+           test_lab = 'Number of categories within the population')
+  # end timer
+  runtime <- tictoc::toc()
+  return(runtime)
+}
+
+#' function to  test number of sampling units (i.e., number of hauls)
+#' 
+#' @export
+#' 
+test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters){
+  #start timer
+  tictoc::tic()
+  # set number of sampling units
+  su_test <- c(100, 250, 500, 1000)
+  # run simulation
+  rr_su <- purrr::map(1:sim_reps, ~purrr::map(1:length(su_test), ~rep_sim(d, pu, pc, pu_cv, su_num = su_test[.], su_samp, p_su_samp, iters)))
+  # save & plot results
+  plot_sim(rr = rr_su, 
+           plot_name = 'Nsu', 
+           test_vec = su_test, 
+           test_name = "S",
+           test_lab = 'Number of sampling units')
+  # end timer
+  runtime <- tictoc::toc()
+  return(runtime)
+}
+
+#' function to  test sample size within sampling units
+#' 
+#' @export
+#' 
+test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, plot_name){
+  #start timer
+  tictoc::tic()
+  # set sample size within sampling units
+  samp_test <- c(10, 20, 50, 100)
+  # run simulation
+  rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters)))
+  # save & plot results
+  plot_sim(rr = rr_samp, 
+           plot_name = plot_name, 
+           test_vec = samp_test, 
+           test_name = "n",
+           test_lab = 'Number of samples within a sampling unit')
+  # end timer
+  runtime <- tictoc::toc()
+  return(runtime)
+}
+
+#' function to  run experiment 2 tests in parallel
+#' 
+#' @export
+#' 
+run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+  runtime_base %<-% test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_CV %<-% test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_PU %<-% test_PU(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_C %<-% test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_SU %<-% test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_nSU_250 %<-% test6(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250') %seed% TRUE
+  runtime_nSU_500 %<-% test6(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500') %seed% TRUE
+}
+
+#' function that tests bootstrap method in experiment 3
+#' 
+#' @export
+#' 
+test_bs <- function(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+  
+  #start timer
+  tictoc::tic()
+  # run simulation
+  rr_bs <- purrr::map(1:bs_iters, ~bs_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
+  # end timer
+  runtime <- tictoc::toc()
+  
+  # unlist results
+  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$rss_se %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> rss_se
+  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$iss_bs %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> iss_bs
+  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$popn_strctr %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> popn_strctr
+  
+  res <- list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = popn_strctr)
+  
+  res
+}
 
 
+#' function to run bootstrap tests in parallel
+#' 
+#' @export
+#' 
+run_bs_test <- function(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+  
+  # define parallel function runs
+  run1 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run2 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run3 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run4 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run5 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run6 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run7 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run8 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run9 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  run10 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  
+  # combine results
+  rss_se <- run1$rss_se %>% 
+    tidytable::bind_rows(run2$rss_se %>% 
+                           tidytable::mutate(sim = sim + bs_iters)) %>% 
+    tidytable::bind_rows(run3$rss_se %>% 
+                           tidytable::mutate(sim = sim + 2 * bs_iters)) %>% 
+    tidytable::bind_rows(run4$rss_se %>% 
+                           tidytable::mutate(sim = sim + 3 * bs_iters)) %>% 
+    tidytable::bind_rows(run5$rss_se %>% 
+                           tidytable::mutate(sim = sim + 4 * bs_iters)) %>% 
+    tidytable::bind_rows(run6$rss_se %>% 
+                           tidytable::mutate(sim = sim + 5 * bs_iters)) %>% 
+    tidytable::bind_rows(run7$rss_se %>% 
+                           tidytable::mutate(sim = sim + 6 * bs_iters)) %>% 
+    tidytable::bind_rows(run8$rss_se %>% 
+                           tidytable::mutate(sim = sim + 7 * bs_iters)) %>% 
+    tidytable::bind_rows(run9$rss_se %>% 
+                           tidytable::mutate(sim = sim + 8 * bs_iters)) %>% 
+    tidytable::bind_rows(run10$rss_se %>% 
+                           tidytable::mutate(sim = sim + 9 * bs_iters))
+  
+  iss_bs <- run1$iss_bs %>% 
+    tidytable::bind_rows(run2$iss_bs %>% 
+                           tidytable::mutate(sim = sim + bs_iters)) %>% 
+    tidytable::bind_rows(run3$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 2 * bs_iters)) %>% 
+    tidytable::bind_rows(run4$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 3 * bs_iters)) %>% 
+    tidytable::bind_rows(run5$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 4 * bs_iters)) %>% 
+    tidytable::bind_rows(run6$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 5 * bs_iters)) %>% 
+    tidytable::bind_rows(run7$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 6 * bs_iters)) %>% 
+    tidytable::bind_rows(run8$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 7 * bs_iters)) %>% 
+    tidytable::bind_rows(run9$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 8 * bs_iters)) %>% 
+    tidytable::bind_rows(run10$iss_bs %>% 
+                           tidytable::mutate(sim = sim + 9 * bs_iters))
+  
+  popn_strctr <- run1$popn_strctr %>% 
+    tidytable::bind_rows(run2$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + bs_iters)) %>% 
+    tidytable::bind_rows(run3$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 2 * bs_iters)) %>% 
+    tidytable::bind_rows(run4$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 3 * bs_iters)) %>% 
+    tidytable::bind_rows(run5$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 4 * bs_iters)) %>% 
+    tidytable::bind_rows(run6$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 5 * bs_iters)) %>% 
+    tidytable::bind_rows(run7$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 6 * bs_iters)) %>% 
+    tidytable::bind_rows(run8$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 7 * bs_iters)) %>% 
+    tidytable::bind_rows(run9$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 8 * bs_iters)) %>% 
+    tidytable::bind_rows(run10$popn_strctr %>% 
+                           tidytable::mutate(sim = sim + 9 * bs_iters))
+  
+  
+  res <- list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = popn_strctr)
+  
+  # save results
+  saveRDS(res,
+          file = here::here('output', paste0('exp3_bs.rds')))
+  
+  # plot results
+  true_iss <- res_bs$rss_se %>%  
+    tidytable::left_join(res_bs$popn_strctr) %>% 
+    tidytable::summarise(Wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
+                         Unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
+                         .by = c(selex_type, popn_strctr)) %>% 
+    tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
+    tidytable::rename(type = name, iss = value) %>% 
+    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
+  
+  bs_iss <- res_bs$iss_bs %>%  
+    tidytable::left_join(res_bs$popn_strctr) %>%
+    tidytable::rename(Wtd = bs_iss_wtd, Unwtd = bs_iss_unwtd) %>% 
+    tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
+    tidytable::rename(type = name, iss = value) %>% 
+    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
+  
+  bs_plot_popn <- ggplot(data = bs_iss, aes(x = type, y = iss, fill = type)) + 
+    geom_boxplot(alpha = 0.7) +
+    geom_point(data = true_iss, shape = 24, size = 2, fill = 'white', aes(x = type, y = iss)) +
+    facet_grid(selex_type ~ popn_strctr, scales = 'free_y') +
+    scico::scale_color_scico_d(palette = 'roma') +
+    scico::scale_fill_scico_d(palette = 'roma') +
+    theme_bw() +
+    guides(fill = 'none') +
+    ylab("Input sample size (ISS)") +
+    xlab("Composition expansion type")
+  
+  ggsave(filename = "exp3_bs.png",
+         plot = bs_plot_popn,
+         path = here::here("figs"),
+         width = 6.5,
+         height = 5,
+         units = "in")
+  
+}
 
