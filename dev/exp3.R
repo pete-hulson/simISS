@@ -5,8 +5,6 @@ library(future)
 source(here::here('R', 'base_functions.R'))
 source(here::here('R', 'exp3_functions.R'))
 
-
-
 # set up experiment parameters ----
 
 ## simulation/bootstrap parameters ----
@@ -63,13 +61,13 @@ if(numCore > 10){
   if(isTRUE(full_run)){
     tictoc::tic()
     future::plan(multisession, workers = 10)
-    run_bs_test(X, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   } else{
     tictoc::tic()
     future::plan(multisession, workers = 10)
-    run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   }
@@ -80,13 +78,13 @@ if(numCore < 10){
   if(isTRUE(full_run)){
     tictoc::tic()
     future::plan(multisession, workers = numCore - 1)
-    run_bs_test(bs_iters = round(10 * X / (numCore - 1), digits = 0), pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(bs_iters = round(10 * X / (numCore - 1), digits = 0), d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   } else{
     tictoc::tic()
     future::plan(multisession, workers = numCore - 1)
-    run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   }
