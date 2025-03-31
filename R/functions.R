@@ -564,6 +564,8 @@ test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters){
            fact_perc = TRUE)
   # end timer
   runtime <- tictoc::toc()
+  
+  return(runtime)
 }
 
 #' function to test number of pop'n units
@@ -585,6 +587,8 @@ test_PU <- function(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
            test_lab = 'Number of population units')
   # end timer
   runtime <- tictoc::toc()
+  
+  return(runtime)
 }
 
 #' function to test number of categories (i.e., longevity, growth)
@@ -606,6 +610,8 @@ test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters){
            test_lab = 'Number of categories within the population')
   # end timer
   runtime <- tictoc::toc()
+  
+  return(runtime)
 }
 
 #' function to  test number of sampling units (i.e., number of hauls)
@@ -627,6 +633,8 @@ test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters){
            test_lab = 'Number of sampling units')
   # end timer
   runtime <- tictoc::toc()
+  
+  return(runtime)
 }
 
 #' function to  test sample size within sampling units
@@ -648,6 +656,8 @@ test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, plot_name){
            test_lab = 'Number of samples within a sampling unit')
   # end timer
   runtime <- tictoc::toc()
+  
+  return(runtime)
 }
 
 #' function to  run experiment 2 tests in parallel
@@ -662,6 +672,13 @@ run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_sam
   runtime_SU %<-% test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters) %seed% TRUE
   runtime_nSU_250 %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250') %seed% TRUE
   runtime_nSU_500 %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500') %seed% TRUE
+  runtimes <- c((runtime_base$toc - runtime_base$tic),
+                (runtime_CV$toc - runtime_CV$tic),
+                (runtime_PU$toc - runtime_PU$tic),
+                (runtime_C$toc - runtime_C$tic),
+                (runtime_SU$toc - runtime_SU$tic),
+                (runtime_nSU_250$toc - runtime_nSU_250$tic),
+                (runtime_nSU_500$toc - runtime_nSU_500$tic))
 }
 
 #' function that tests bootstrap method in experiment 3
