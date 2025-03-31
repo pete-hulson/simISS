@@ -2,7 +2,9 @@
 # load/source stuff ----
 library(tidyverse)
 library(future)
-source(here::here('R', 'functions.R'))
+source(here::here('R', 'base_functions.R'))
+source(here::here('R', 'exp3_functions.R'))
+
 
 
 # set up experiment parameters ----
