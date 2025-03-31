@@ -541,7 +541,6 @@ test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, it
   plot_exp(rr_exp)
   # end timer
   runtime <- tictoc::toc()
-  return(runtime)
 }
 
 #' function to test pop'n unit structure (spread around mean category determined by CV)
@@ -565,7 +564,6 @@ test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters){
            fact_perc = TRUE)
   # end timer
   runtime <- tictoc::toc()
-  return(runtime)
 }
 
 #' function to test number of pop'n units
@@ -587,7 +585,6 @@ test_PU <- function(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
            test_lab = 'Number of population units')
   # end timer
   runtime <- tictoc::toc()
-  return(runtime)
 }
 
 #' function to test number of categories (i.e., longevity, growth)
@@ -609,7 +606,6 @@ test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters){
            test_lab = 'Number of categories within the population')
   # end timer
   runtime <- tictoc::toc()
-  return(runtime)
 }
 
 #' function to  test number of sampling units (i.e., number of hauls)
@@ -631,7 +627,6 @@ test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters){
            test_lab = 'Number of sampling units')
   # end timer
   runtime <- tictoc::toc()
-  return(runtime)
 }
 
 #' function to  test sample size within sampling units
@@ -653,7 +648,6 @@ test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, plot_name){
            test_lab = 'Number of samples within a sampling unit')
   # end timer
   runtime <- tictoc::toc()
-  return(runtime)
 }
 
 #' function to  run experiment 2 tests in parallel
@@ -666,8 +660,8 @@ run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_sam
   runtime_PU %<-% test_PU(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
   runtime_C %<-% test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
   runtime_SU %<-% test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters) %seed% TRUE
-  runtime_nSU_250 %<-% test6(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250') %seed% TRUE
-  runtime_nSU_500 %<-% test6(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500') %seed% TRUE
+  runtime_nSU_250 %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250') %seed% TRUE
+  runtime_nSU_500 %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500') %seed% TRUE
 }
 
 #' function that tests bootstrap method in experiment 3
@@ -784,8 +778,8 @@ run_bs_test <- function(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, ite
           file = here::here('output', paste0('exp3_bs.rds')))
   
   # plot results
-  true_iss <- res_bs$rss_se %>%  
-    tidytable::left_join(res_bs$popn_strctr) %>% 
+  true_iss <- rss_se %>%  
+    tidytable::left_join(popn_strctr) %>% 
     tidytable::summarise(Wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
                          Unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
                          .by = c(selex_type, popn_strctr)) %>% 
@@ -793,8 +787,8 @@ run_bs_test <- function(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, ite
     tidytable::rename(type = name, iss = value) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
   
-  bs_iss <- res_bs$iss_bs %>%  
-    tidytable::left_join(res_bs$popn_strctr) %>%
+  bs_iss <- iss_bs %>%  
+    tidytable::left_join(popn_strctr) %>%
     tidytable::rename(Wtd = bs_iss_wtd, Unwtd = bs_iss_unwtd) %>% 
     tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
     tidytable::rename(type = name, iss = value) %>% 

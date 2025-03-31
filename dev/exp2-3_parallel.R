@@ -8,12 +8,10 @@ source(here::here('R', 'functions.R'))
 # set up experiment parameters ----
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 2
+sim_reps <- 1000
 
 # number of bootstrap replicates
-bs_iters <- 2
-
-
+bs_iters <- 1000
 
 ## simulation/bootstrap parameters ----
 
@@ -58,9 +56,10 @@ future::plan(sequential)
 runtime_test_exp2 <- tictoc::toc()
 
 
-# experiment 3: can a given realization of a sample give the 'true' iss back? ----
+# experiment 3: ----
+# can a given realization of a sample give the 'true' iss back?
 
-# run in parallel
+# run exp3 in parallel
 tictoc::tic()
 future::plan(multisession, workers = 10)
 run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
@@ -70,23 +69,8 @@ runtime_test_exp3 <- tictoc::toc()
 
 # calc runtime for 500 runs ----
 # experiment 2
-(runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * 500 / 60
+(runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * 1000 / 60
 # experiment 3
-(runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * 500 / 60
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * 1000 / 60
 
 
