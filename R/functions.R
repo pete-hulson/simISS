@@ -292,7 +292,7 @@ plot_exp <- function(rr){
   
   # save results
   saveRDS(res,
-          file = here::here('output', 'exp2_test1.rds'))
+          file = here::here('output', 'exp2_base.rds'))
   
   # plot results by population structure
   plot_dat <- res %>% 

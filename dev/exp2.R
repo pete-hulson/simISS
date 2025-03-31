@@ -14,7 +14,7 @@ iters <- 1000
 ## sampling parameters ----
 
 # number of sampling units (e.g., hauls)
-su_num <- 500
+su_num <- 250
 
 # number of samples per sampling unit (e.g., ages/lengths)
 # vector to test differences in number of samples across sampling unit
@@ -42,105 +42,158 @@ d <- log(0.01) / (1 - pc)
 # what are the factors that influence input sample size?
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 1000
+sim_reps <- 2
 
 ## test expansion weighting & pop'n structure ----
 
-# run simulation
-tictoc::tic()
-rr_exp <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
-runtime_exp <- tictoc::toc()
+# # non-parallel way
+# # run simulation
+# tictoc::tic()
+# rr_exp <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
+# runtime_exp <- tictoc::toc()
+# 
+# # calc runtime test
+# (runtime_exp$toc - runtime_exp$tic) / (60 * sim_reps) * 1000 / 60
+# 
+# # save & plot results
+# plot_exp(rr_exp)
 
-# calc runtime test
-(runtime_exp$toc - runtime_exp$tic) / (60 * sim_reps) * 1000 / 60
-
-# save & plot results
-plot_exp(rr_exp)
+# parallel way
+test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
 
 
 ## test pop'n unit structure (spread around mean category) ----
 
-# set levels of cv
-pu_cv_test <- c(0.05, 0.1, 0.25, 1)
+# # non-parallel way
+# #start timer
+# tictoc::tic()
+# # set levels of cv
+# pu_cv_test <- c(0.1, 0.25, 1, 100)
+# # run simulation
+# rr_cv <- purrr::map(1:sim_reps, ~purrr::map(1:length(pu_cv_test), ~rep_sim(d, pu, pc, pu_cv = pu_cv_test[.], su_num, su_samp, p_su_samp, iters)))
+# # save & plot results
+# plot_sim(rr = rr_cv, 
+#          plot_name = 'cv', 
+#          test_vec = pu_cv_test, 
+#          test_name = "CV",
+#          test_lab = 'Population unit CV around mean category',
+#          plot_nss = TRUE,
+#          fact_perc = TRUE)
+# # end timer
+# runtime <- tictoc::toc()
 
-# run simulation
-tictoc::tic()
-rr_cv <- purrr::map(1:sim_reps, ~purrr::map(1:length(pu_cv_test), ~rep_sim(d, pu, pc, pu_cv = pu_cv_test[.], su_num, su_samp, p_su_samp, iters)))
-runtime_cv <- tictoc::toc()
-
-# save & plot results
-plot_sim(rr_cv, 'cv', pu_cv_test, "CV", fact_perc = TRUE)
+# parallel way
+test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters)
 
 
 ## test number of pop'n units ----
 
-# set numbers of pop'n units
-npu_test <- c(5, 10, 25, 100)
+# # non-parallel way
+# #start timer
+# tictoc::tic()
+# # set numbers of pop'n units
+# npu_test <- c(25, 100, 250, 500)
+# # run simulation
+# rr_npu <- purrr::map(1:sim_reps, ~purrr::map(1:length(npu_test), ~rep_sim(d, pu = npu_test[.], pc, pu_cv, su_num, su_samp, p_su_samp, iters)))
+# # save & plot results
+# plot_sim(rr = rr_npu, 
+#          plot_name = 'Npu', 
+#          test_vec = npu_test, 
+#          test_name = "PU",
+#          test_lab = 'Number of population units')
+# # end timer
+# runtime <- tictoc::toc()
 
-# run simulation
-tictoc::tic()
-rr_npu <- purrr::map(1:sim_reps, ~purrr::map(1:length(npu_test), ~rep_sim(d, pu = npu_test[.], pc, pu_cv, su_num, su_samp, p_su_samp, iters)))
-runtime_npu <- tictoc::toc()
-
-# save & plot results
-plot_sim(rr_npu, 'npu', npu_test, "N_PU")
+# parallel way
+test_PU(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
 
 
 ## test number of categories (i.e., longevity, growth) ----
 
-# set numbers of categories
-cat_test <- c(10, 15, 25, 50)
+# # non-parallel way
+# #start timer
+# tictoc::tic()
+# # set numbers of categories
+# cat_test <- c(10, 15, 25, 50)
+# # run simulation
+# rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters)))
+# # save & plot results
+# plot_sim(rr = rr_cat, 
+#          plot_name = 'Ncat', 
+#          test_vec = cat_test,
+#          test_name = "C",
+#          test_lab = 'Number of categories within the population')
+# # end timer
+# runtime <- tictoc::toc()
 
-# run simulation
-tictoc::tic()
-rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters)))
-runtime_cat <- tictoc::toc()
-
-# save & plot results
-plot_sim(rr_cat, 'cat', cat_test, "N_Cat")
+# parallel way
+test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters)
 
 
 ## test number of sampling units (i.e., number of hauls) ----
 
-# set numbers of categories
-su_test <- c(50, 100, 250, 500)
+# # non-parallel way
+# #start timer
+# tictoc::tic()
+# # set number of sampling units
+# su_test <- c(100, 250, 500, 1000)
+# # run simulation
+# rr_su <- purrr::map(1:sim_reps, ~purrr::map(1:length(su_test), ~rep_sim(d, pu, pc, pu_cv, su_num = su_test[.], su_samp, p_su_samp, iters)))
+# # save & plot results
+# plot_sim(rr = rr_su, 
+#          plot_name = 'Nsu', 
+#          test_vec = su_test, 
+#          test_name = "S",
+#          test_lab = 'Number of sampling units')
+# # end timer
+# runtime <- tictoc::toc()
 
-# run simulation
-tictoc::tic()
-rr_su <- purrr::map(1:sim_reps, ~purrr::map(1:length(su_test), ~rep_sim(d, pu, pc, pu_cv, su_num = su_test[.], su_samp, p_su_samp, iters)))
-runtime_su <- tictoc::toc()
-
-# save & plot results
-plot_sim(rr_su, 'su', su_test, "N_SU")
-
-
-## test sample size within sampling units ----
-
-# set numbers of categories
-samp_test <- c(20, 50, 100, 250)
-
-# run simulation
-tictoc::tic()
-rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters)))
-runtime_samp <- tictoc::toc()
-
-# save & plot results
-plot_sim(rr_samp, 'samp', samp_test, "N_Samp")
-
-# calc runtime for 500 simulations
-((runtime_exp$toc - runtime_exp$tic) + 
-    (runtime_cv$toc - runtime_cv$tic) + 
-    (runtime_npu$toc - runtime_npu$tic) + 
-    (runtime_cat$toc - runtime_cat$tic) + 
-    (runtime_su$toc - runtime_su$tic) + 
-    (runtime_samp$toc - runtime_samp$tic)) / (60 * sim_reps) * 250 / 60
+# parallel way
+test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters)
 
 
+## test sample size within sampling units (for 250 sampling units) ----
+
+# # non-parallel way
+# #start timer
+# tictoc::tic()
+# # set sample size within sampling units
+# samp_test <- c(10, 20, 50, 100)
+# # run simulation
+# rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters)))
+# # save & plot results
+# plot_sim(rr = rr_samp, 
+#          plot_name = plot_name, 
+#          test_vec = samp_test, 
+#          test_name = "n",
+#          test_lab = 'Number of samples within a sampling unit')
+# # end timer
+# runtime <- tictoc::toc()
+
+# parallel way
+test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250')
 
 
+## test sample size within sampling units (for 250 sampling units) ----
 
+# # non-parallel way
+# #start timer
+# tictoc::tic()
+# # set sample size within sampling units
+# samp_test <- c(10, 20, 50, 100)
+# # run simulation
+# rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num = 500, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters)))
+# # save & plot results
+# plot_sim(rr = rr_samp, 
+#          plot_name = plot_name, 
+#          test_vec = samp_test, 
+#          test_name = "n",
+#          test_lab = 'Number of samples within a sampling unit')
+# # end timer
+# runtime <- tictoc::toc()
 
-
+# parallel way
+test_nSU(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500')
 
 
 

@@ -8,10 +8,10 @@ source(here::here('R', 'functions.R'))
 # set up experiment parameters ----
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 1000
+sim_reps <- 2
 
 # number of bootstrap replicates
-bs_iters <- 1000
+bs_iters <- 2
 
 ## simulation/bootstrap parameters ----
 
