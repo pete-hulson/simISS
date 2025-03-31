@@ -712,19 +712,29 @@ test_bs <- function(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
 #' 
 #' @export
 #' 
-run_bs_test <- function(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+run_bs_test <- function(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore){
   
   # define parallel function runs
-  run1 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run2 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run3 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run4 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run5 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run6 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run7 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run8 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run9 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-  run10 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  if(numCore > 10){
+    run1 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run2 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run3 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run4 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run5 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run6 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run7 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run8 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run9 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run10 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  } else{
+    run1 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run2 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run3 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run4 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run5 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run6 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run7 %<-% test_bs(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  }
   
   # combine results
   rss_se <- run1$rss_se %>% 

@@ -42,7 +42,7 @@ d <- log(0.01) / (1 - pc)
 # experiment 3: can a given realization of a sample give the 'true' iss back? ----
 
 # number of bootstrap replicates
-bs_iters <- 10
+bs_iters <- 5
 
 # number of desired bootstrap replicates
 X <- 1000
@@ -58,11 +58,19 @@ numCore <- parallel::detectCores()
 
 # running on laptop
 if(numCore > 10){
-  tictoc::tic()
-  future::plan(multisession, workers = 10)
-  run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-  future::plan(sequential)
-  runtime_test_exp3 <- tictoc::toc()
+  if(isTRUE(full_run)){
+    tictoc::tic()
+    future::plan(multisession, workers = 10)
+    run_bs_test(X, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    future::plan(sequential)
+    runtime_test_exp3 <- tictoc::toc()
+  } else{
+    tictoc::tic()
+    future::plan(multisession, workers = 10)
+    run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    future::plan(sequential)
+    runtime_test_exp3 <- tictoc::toc()
+  }
 }
 
 # running on VM
@@ -70,13 +78,13 @@ if(numCore < 10){
   if(isTRUE(full_run)){
     tictoc::tic()
     future::plan(multisession, workers = numCore - 1)
-    run_bs_test(round(10 * X / (numCore - 1), digits = 0), pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+    run_bs_test(bs_iters = round(10 * X / (numCore - 1), digits = 0), pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   } else{
     tictoc::tic()
     future::plan(multisession, workers = numCore - 1)
-    run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+    run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   }

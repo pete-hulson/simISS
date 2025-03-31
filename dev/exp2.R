@@ -43,7 +43,7 @@ d <- log(0.01) / (1 - pc)
 # what are the factors that influence input sample size?
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 2
+sim_reps <- 5
 
 # number of desired bootstrap replicates
 X <- 1000
@@ -53,11 +53,19 @@ full_run = FALSE
 
 
 # run exp2 tests in parallel
-tictoc::tic()
-future::plan(multisession, workers = 7)
-run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-future::plan(sequential)
-runtime_test_exp2 <- tictoc::toc()
+if(isTRUE(full_run)){
+  tictoc::tic()
+  future::plan(multisession, workers = 7)
+  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  future::plan(sequential)
+  runtime_test_exp2 <- tictoc::toc()
+}else{
+  tictoc::tic()
+  future::plan(multisession, workers = 7)
+  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  future::plan(sequential)
+  runtime_test_exp2 <- tictoc::toc()
+}
 
 
 # calc runtime for X simulations

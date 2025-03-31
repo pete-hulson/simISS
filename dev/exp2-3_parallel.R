@@ -7,12 +7,6 @@ source(here::here('R', 'functions.R'))
 
 # set up experiment parameters ----
 
-# number of simulation replicates for testing iss axes of influence
-sim_reps <- 2
-
-# number of bootstrap replicates
-bs_iters <- 2
-
 ## simulation/bootstrap parameters ----
 
 # number of simulation/bootstrap iterations
@@ -44,33 +38,91 @@ pu_cv <- 0.25
 # pop'n exponential decay (e.g., lnM, tied to inverse of number of pop'n categories so that pop'n = 0.01 at largest category)
 d <- log(0.01) / (1 - pc)
 
+## number of sims/reps ----
+
+# number of simulation replicates for testing iss axes of influence
+sim_reps <- 5
+
+# number of bootstrap replicates
+bs_iters <- 5
+
+# number of desired bootstrap replicates
+X <- 1000
+
+# full run?
+full_run = FALSE
+
 
 # experiment 2: ----
 # what are the factors that influence input sample size?
 
 # run exp2 tests in parallel
-tictoc::tic()
-future::plan(multisession, workers = 6)
-run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-future::plan(sequential)
-runtime_test_exp2 <- tictoc::toc()
+if(isTRUE(full_run)){
+  tictoc::tic()
+  future::plan(multisession, workers = 7)
+  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  future::plan(sequential)
+  runtime_test_exp2 <- tictoc::toc()
+}else{
+  tictoc::tic()
+  future::plan(multisession, workers = 7)
+  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  future::plan(sequential)
+  runtime_test_exp2 <- tictoc::toc()
+}
 
 
 # experiment 3: ----
 # can a given realization of a sample give the 'true' iss back?
 
 # run exp3 in parallel
-tictoc::tic()
-future::plan(multisession, workers = 10)
-run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-future::plan(sequential)
-runtime_test_exp3 <- tictoc::toc()
+
+# get number of cores
+numCore <- parallel::detectCores()
+
+# running on laptop
+if(numCore > 10){
+  if(isTRUE(full_run)){
+    tictoc::tic()
+    future::plan(multisession, workers = 10)
+    run_bs_test(X, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    future::plan(sequential)
+    runtime_test_exp3 <- tictoc::toc()
+  } else{
+    tictoc::tic()
+    future::plan(multisession, workers = 10)
+    run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    future::plan(sequential)
+    runtime_test_exp3 <- tictoc::toc()
+  }
+}
+
+# running on VM
+if(numCore < 10){
+  if(isTRUE(full_run)){
+    tictoc::tic()
+    future::plan(multisession, workers = numCore - 1)
+    run_bs_test(bs_iters = round(10 * X / (numCore - 1), digits = 0), pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    future::plan(sequential)
+    runtime_test_exp3 <- tictoc::toc()
+  } else{
+    tictoc::tic()
+    future::plan(multisession, workers = numCore - 1)
+    run_bs_test(bs_iters, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    future::plan(sequential)
+    runtime_test_exp3 <- tictoc::toc()
+  }
+}
 
 
-# calc runtime for 500 runs ----
+# calc runtime test for X runs ----
 # experiment 2
-(runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * 1000 / 60
+(runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60
 # experiment 3
-(runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * 1000 / 60
+if(numCore > 10){
+  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60
+} else{
+  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / (numCore - 1), digits = 0) / 60
+}
 
 
