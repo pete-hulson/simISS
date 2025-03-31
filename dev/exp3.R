@@ -1,5 +1,8 @@
+# experiment 3: ----
+# can bootstrapping a given realization of a sample give the 'true' iss back?
 
-# load/source stuff ----
+
+# load libraries/source fcns ----
 library(tidyverse)
 library(future)
 source(here::here('R', 'base_functions.R'))
@@ -9,7 +12,16 @@ source(here::here('R', 'exp3_functions.R'))
 
 ## simulation/bootstrap parameters ----
 
-# number of simulation/bootstrap iterations
+# full run?
+full_run = FALSE
+
+# number of bootstrap replicates
+bs_iters <- 5
+
+# number of desired bootstrap replicates
+X <- 1000
+
+# number of bootstrap iterations
 iters <- 1000
 
 ## sampling parameters ----
@@ -39,24 +51,12 @@ pu_cv <- 0.25
 d <- log(0.01) / (1 - pc)
 
 
-# experiment 3: can a given realization of a sample give the 'true' iss back? ----
-
-# number of bootstrap replicates
-bs_iters <- 5
-
-# number of desired bootstrap replicates
-X <- 1000
-
-# full run?
-full_run = FALSE
-
-
-# run exp3 in parallel
+# run exp3 in parallel ----
 
 # get number of cores
 numCore <- parallel::detectCores()
 
-# running on laptop
+# run on 10 cores
 if(numCore > 10){
   if(isTRUE(full_run)){
     tictoc::tic()
@@ -73,28 +73,28 @@ if(numCore > 10){
   }
 }
 
-# running on VM
+# run on 7 cores
 if(numCore < 10){
   if(isTRUE(full_run)){
     tictoc::tic()
-    future::plan(multisession, workers = numCore - 1)
-    run_bs_test(bs_iters = round(10 * X / (numCore - 1), digits = 0), d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    future::plan(multisession, workers = 7)
+    run_bs_test(bs_iters = round(10 * X / 7, digits = 0), d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   } else{
     tictoc::tic()
-    future::plan(multisession, workers = numCore - 1)
+    future::plan(multisession, workers = 7)
     run_bs_test(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   }
 }
 
-# calc runtime for X runs ----
+# calc runtime for X replicates
 if(numCore > 10){
   (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60
 } else{
-  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / (numCore - 1), digits = 0) / 60
+  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60
 }
 
 
