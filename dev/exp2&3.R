@@ -23,7 +23,7 @@ sim_reps <- 5
 bs_iters <- 5
 
 # number of desired bootstrap replicates
-X <- 1000
+X <- 500
 
 # number of bootstrap iterations
 iters <- 1000
@@ -55,23 +55,6 @@ pu_cv <- 0.25
 
 # pop'n exponential decay (e.g., lnM, tied to inverse of number of pop'n categories so that pop'n = 0.01 at largest category)
 d <- log(0.01) / (1 - pc)
-
-
-# experiment 2: ----
-
-if(isTRUE(full_run)){
-  tictoc::tic()
-  future::plan(multisession, workers = 7)
-  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-  future::plan(sequential)
-  runtime_test_exp2 <- tictoc::toc()
-}else{
-  tictoc::tic()
-  future::plan(multisession, workers = 7)
-  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-  future::plan(sequential)
-  runtime_test_exp2 <- tictoc::toc()
-}
 
 
 # experiment 3: ----
@@ -114,15 +97,36 @@ if(numCore < 10){
 }
 
 
+# experiment 2: ----
+
+if(isTRUE(full_run)){
+  tictoc::tic()
+  future::plan(multisession, workers = 7)
+  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  future::plan(sequential)
+  runtime_test_exp2 <- tictoc::toc()
+}else{
+  tictoc::tic()
+  future::plan(multisession, workers = 7)
+  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  future::plan(sequential)
+  runtime_test_exp2 <- tictoc::toc()
+}
+
+
 # calc runtime test for X runs ----
 if(isTRUE(full_run)){
-  cat("Exp2 run took", (runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, "hrs")
+  cat("Exp2 run took", (runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, "hrs\n")
   cat("Exp3 run took", (runtime_test_exp3$toc - runtime_test_exp3$tic) / 60 / 60, "hrs")
 } else{
-  cat("Exp2 run is estimated to take", (runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60, "hrs")
+  runtime_exp2 <- round((runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60, digits = 1)
+  cat("Exp2 run is estimated to take", runtime_exp2, "hrs\n")
   if(numCore > 10){
-    cat("Exp3 run is estimated to take", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60, digits = 1), "hrs")
+    runtime_exp3 <- round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60, digits = 1)
+    cat("Exp3 run is estimated to take", runtime_exp3, "hrs\n")
   } else{
-    cat("Exp3 run is estimated to take", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60, digits = 1), "hrs")
+    runtime_exp3 <- round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60, digits = 1)
+    cat("Exp3 run is estimated to take", runtime_exp3, "hrs\n")
   }
+  cat("Exp 2&3 total run time estimated to take", round((runtime_exp2 + runtime_exp2) / 24, digits = 1), "days")
 }
