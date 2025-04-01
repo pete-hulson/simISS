@@ -1,5 +1,8 @@
+# experiment 2: ----
+# what are the factors that influence input sample size?
 
-# load/source stuff ----
+
+# load libraries/source fcns ----
 library(tidyverse)
 library(future)
 source(here::here('R', 'base_functions.R'))
@@ -10,7 +13,16 @@ source(here::here('R', 'exp2_functions.R'))
 
 ## simulation/bootstrap parameters ----
 
-# number of simulation/bootstrap iterations
+# full run?
+full_run = FALSE
+
+# number of simulation replicates for testing iss axes of influence
+sim_reps <- 5
+
+# number of desired simulation replicates
+X <- 1000
+
+# number of bootstrap iterations
 iters <- 1000
 
 ## sampling parameters ----
@@ -40,20 +52,7 @@ pu_cv <- 0.25
 d <- log(0.01) / (1 - pc)
 
 
-# experiment 2: ----
-# what are the factors that influence input sample size?
-
-# number of simulation replicates for testing iss axes of influence
-sim_reps <- 5
-
-# number of desired bootstrap replicates
-X <- 1000
-
-# full run?
-full_run = FALSE
-
-
-# run exp2 tests in parallel
+# run exp2 tests in parallel (on 7 cores) ----
 if(isTRUE(full_run)){
   tictoc::tic()
   future::plan(multisession, workers = 7)
@@ -71,10 +70,3 @@ if(isTRUE(full_run)){
 
 # calc runtime for X simulations
 (runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60
-
-
-
-
-
-
-
