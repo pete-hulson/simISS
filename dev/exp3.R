@@ -91,10 +91,12 @@ if(numCore < 10){
 }
 
 # calc runtime for X replicates
-if(numCore > 10){
-  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60
+if(isTRUE(full_run)){
+  cat("Run took", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / 60 / 60, digits = 1), "hrs")
 } else{
-  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60
+  if(numCore > 10){
+    cat("Run is estimated to take", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60, digits = 1), "hrs")
+  } else{
+    cat("Run is estimated to take", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60, digits = 1), "hrs")
+  }
 }
-
-

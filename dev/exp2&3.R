@@ -115,13 +115,14 @@ if(numCore < 10){
 
 
 # calc runtime test for X runs ----
-# experiment 2
-(runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60
-# experiment 3
-if(numCore > 10){
-  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60
+if(isTRUE(full_run)){
+  cat("Exp2 run took", (runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, "hrs")
+  cat("Exp3 run took", (runtime_test_exp3$toc - runtime_test_exp3$tic) / 60 / 60, "hrs")
 } else{
-  (runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60
+  cat("Exp2 run is estimated to take", (runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60, "hrs")
+  if(numCore > 10){
+    cat("Exp3 run is estimated to take", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * X / 60, digits = 1), "hrs")
+  } else{
+    cat("Exp3 run is estimated to take", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60, digits = 1), "hrs")
+  }
 }
-
-

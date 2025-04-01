@@ -69,4 +69,8 @@ if(isTRUE(full_run)){
 
 
 # calc runtime for X simulations
-(runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60
+if(isTRUE(full_run)){
+  cat("Run took", (runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, "hrs")
+} else{
+  cat("Run is estimated to take", (runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60, "hrs")
+}
