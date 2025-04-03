@@ -14,7 +14,7 @@ source(here::here('R', 'exp3_functions.R'))
 ## simulation/bootstrap parameters ----
 
 # full run?
-full_run = FALSE
+full_run = TRUE
 
 # number of simulation replicates for testing iss axes of influence (exp2)
 sim_reps <- 5
