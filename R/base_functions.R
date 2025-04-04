@@ -253,7 +253,7 @@ nll_logistic_normal <- function(data,
   
   # calculate sigma
   sigma2 <- data$iss %>% 
-    # tidytable::mutate(sigma2 = sigma^2 / iss)
+    # tidytable::mutate(sigma2 = sigma^2 / iss) # matt's way where divide by iss
     tidytable::mutate(sigma2 = sigma^2)
   
   # set up covariance matrix
