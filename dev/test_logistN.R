@@ -3,6 +3,7 @@
 library(tidyverse)
 library(future)
 source(here::here('R', 'base_functions.R'))
+source(here::here('R', 'stats_functions.R'))
 
 
 # set up experiment parameters ----
@@ -97,10 +98,11 @@ if(any(data$obs == 0) || any(data$exp == 0)) {
 
 
 # notes ----
-# want to test whether taking mean of sigmas estimated within an iters gives similar
-# value to estimate of sigma across combined iters
+# want to test whether taking mean of sigmas estimated within an iteration gives similar
+# value to estimate of sigma across combined iterations
 #
 # mean across iterations tends to be smaller than the sigma using all iterations
+# that is, uncertainty is larger estimating sigma across combined iteration dataframe
 
 # estimate logsitN params for each iter ----
 combs_it <- tidytable::expand_grid(iter = 1:iters,
