@@ -254,28 +254,16 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   # run sim loop
   rr_sim <- purrr::map(1:iters, ~sim_comp(su_num, sim_popn, su_samp, p_su_samp))
   
-  # unlist results
-  do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_sim
-  
-  # compute realized sample size
-  res_sim %>% 
-    tidytable::left_join(sim_popn$p_true) %>% 
-    tidytable::summarise(rss_wtd = sum(p_true * (1- p_true)) / sum((samp_p_wtd - p_true) ^ 2),
-                         rss_unwtd = sum(p_true * (1- p_true)) / sum((samp_p_unwtd - p_true) ^ 2),
-                         .by = c(sim, selex_type)) -> rss_sim
-  
-  # compute input sample size & nominal sample size
-  rss_sim %>% 
+  # estimate statistics & join with other results
+  stats <- est_stats(rr_sim, sim_popn) %>% 
     tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
-                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
-    tidytable::summarise(iss_wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
-                         iss_unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
-                         mean_nss = mean(nss),
-                         .by = selex_type) %>% 
-    tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$popn_strctr[[1]]) -> iss_sim
-  
-  list(iss_sim = iss_sim)
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
+                           tidytable::summarise(mean_nss = mean(nss),
+                                                .by = selex_type)) %>% 
+    tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$popn_strctr[[1]]) 
+
+  # return results
+  list(stats = stats)
   
 }
 
@@ -290,7 +278,7 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
 plot_base <- function(rr){
   
   # unlist results
-  do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$iss_sim %>% 
+  do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$stats %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "rep") -> res
   
   # save results
@@ -299,26 +287,22 @@ plot_base <- function(rr){
   
   # plot results by population structure
   plot_dat <- res %>% 
-    tidytable::rename(Wtd = iss_wtd, Unwtd = iss_unwtd) %>% 
-    tidytable::pivot_longer(cols = c(Wtd, Unwtd, mean_nss)) %>% 
-    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal', 'combined')))
+    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
   
-  plot <- ggplot(data = plot_dat %>% 
-                   tidytable::filter(name %in% c('Wtd', 'Unwtd')), aes(x = selex_type, y = value, fill = name)) +
+  plot <- ggplot(data = plot_dat, aes(x = selex_type, y = iss, fill = comp_type)) +
     geom_boxplot(alpha = 0.7) +
     geom_hline(yintercept = as.numeric(plot_dat %>% 
-                                         tidytable::filter(name %in% c('mean_nss')) %>% 
-                                         tidytable::summarise(nss = mean(value))),
+                                         tidytable::summarise(nss = mean(mean_nss))),
                linewidth = 1,
                colour = scico::scico(3, palette = 'roma')[3]) +
-    facet_grid(name ~ popn_strctr) +
+    facet_grid(comp_type ~ popn_strctr) +
     scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
     theme_bw() +
     scale_x_discrete(guide = guide_axis(angle = 45)) +
     xlab('Selectivity shape') +
     ylab('Input Sample Size (ISS)') +
     guides(fill = 'none')
-  
+
   ggsave(filename = "exp2_base.png",
          plot = plot,
          path = here::here("figs"),
@@ -346,15 +330,14 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
   
   # unlist results
   if(isTRUE(fact_perc)){
-    res <- purrr::map(1:length(rr), ~(do.call(mapply, c(list, rr[[.]], SIMPLIFY = FALSE))$iss_sim %>% 
+    res <- purrr::map(1:length(rr), ~(do.call(mapply, c(list, rr[[.]], SIMPLIFY = FALSE))$stats %>% 
                                         tidytable::map_df(., ~as.data.frame(.x), .id = "test") %>% 
                                         tidytable::mutate(test = dplyr::case_when(test == 1 ~ scales::percent(test_vec[1]),
                                                                                   test == 2 ~ scales::percent(test_vec[2]),
                                                                                   test == 3 ~ scales::percent(test_vec[3]),
                                                                                   test == 4 ~ scales::percent(test_vec[4]))))) %>% 
       tidytable::map_df(., ~as.data.frame(.x), .id = "rep") %>% 
-      tidytable::mutate(facet = factor(paste0(test_name, " = ", test), levels = paste0(test_name, " = ", scales::percent(test_vec)))) %>% 
-      tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd, mean_nss))
+      tidytable::mutate(facet = factor(paste0(test_name, " = ", test), levels = paste0(test_name, " = ", scales::percent(test_vec))))
   } else{
     res <- purrr::map(1:length(rr), ~(do.call(mapply, c(list, rr[[.]], SIMPLIFY = FALSE))$iss_sim %>% 
                                         tidytable::map_df(., ~as.data.frame(.x), .id = "test") %>% 
@@ -363,8 +346,7 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
                                                                                   test == 3 ~ test_vec[3],
                                                                                   test == 4 ~ test_vec[4])))) %>% 
       tidytable::map_df(., ~as.data.frame(.x), .id = "rep") %>% 
-      tidytable::mutate(facet = factor(paste0(test_name, " = ", test), levels = paste0(test_name, " = ", test_vec))) %>% 
-      tidytable::pivot_longer(cols = c(iss_wtd, iss_unwtd, mean_nss))
+      tidytable::mutate(facet = factor(paste0(test_name, " = ", test), levels = paste0(test_name, " = ", test_vec)))
   }
   
   # save results
@@ -372,24 +354,20 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
           file = here::here('output', paste0('exp2_', plot_name, '.rds')))
   
   # plot source simulated results by population structure
-  .plot_dat <- res %>% 
+  plot_dat <- res %>% 
+    tidytable::left_join(res %>% 
+                           tidytable::summarise(nss = mean(mean_nss), .by = facet)) %>% 
+    tidytable::select(-mean_nss) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
-  
-  .plot_dat %>% 
-    tidytable::filter(name != 'mean_nss') %>% 
-    tidytable::left_join(.plot_dat %>% 
-                           tidytable::filter(name == 'mean_nss') %>% 
-                           tidytable::summarise(nss = mean(value), .by = facet)) %>% 
-    tidytable::mutate(name = case_when(name == 'iss_wtd' ~ 'Wtd',
-                                       name == 'iss_unwtd' ~ 'Unwtd')) -> plot_dat
+
   if(isTRUE(plot_nss)){
-    plot <- ggplot(data = plot_dat, aes(x = facet, y = value, fill = name)) +
+    plot <- ggplot(data = plot_dat, aes(x = facet, y = iss, fill = comp_type)) +
       geom_boxplot(alpha = 0.7) +
       geom_hline(data = plot_dat,
                  aes(yintercept = nss),
                  linewidth = 1,
                  colour = scico::scico(3, palette = 'roma')[3]) +
-      facet_grid(name ~ popn_strctr, scales = 'free_y') +
+      facet_grid(comp_type ~ popn_strctr, scales = 'free_y') +
       scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
       theme_bw() +
       xlab(test_lab) +
@@ -397,9 +375,9 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
       ylab('Input Sample Size (ISS)') +
       guides(fill = 'none')
   } else{
-    plot <- ggplot(data = plot_dat, aes(x = facet, y = value, fill = name)) +
+    plot <- ggplot(data = plot_dat, aes(x = facet, y = iss, fill = comp_type)) +
       geom_boxplot(alpha = 0.7) +
-      facet_grid(name ~ popn_strctr, scales = 'free_y') +
+      facet_grid(comp_type ~ popn_strctr, scales = 'free_y') +
       scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
       theme_bw() +
       xlab(test_lab) +
