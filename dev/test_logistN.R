@@ -1,6 +1,7 @@
 
 # load/source stuff ----
 library(tidyverse)
+library(future)
 source(here::here('R', 'base_functions.R'))
 
 
@@ -94,74 +95,217 @@ if(any(data$obs == 0) || any(data$exp == 0)) {
 
 
 
-# vector of selectivity types tested
-selex_t <- unique(data$iss$selex_type)
 
-# run for wtd expansion, iid
-rr_wtd_iid <- purrr::map(1:length(selex_t),
-                         ~est_logistic_normal(start_sigma = log(10),
-                                              cov_strc = 'iid',
-                                              data = data, 
-                                              selex_t = selex_t[.],
-                                              comp_t = 'wtd'))
+# notes ----
+# want to test whether taking mean of sigmas estimated within an iters gives similar
+# value to estimate of sigma across combined iters
+#
+# mean across iterations tends to be smaller than the sigma using all iterations
 
-# run for unwtd expansion, iid
-rr_unwtd_iid <- purrr::map(1:length(selex_t),
-                           ~est_logistic_normal(start_sigma = log(10),
-                                                cov_strc = 'iid',
-                                                data = data, 
-                                                selex_t = selex_t[.],
-                                                comp_t = 'unwtd'))
+# estimate logsitN params for each iter ----
+combs_it <- tidytable::expand_grid(iter = 1:iters,
+                                   selex = unique(data$iss$selex_type), 
+                                   comp = unique(data$iss$comp_type))
 
-# run for wtd expansion, 1DAR1
-rr_wtd_1DAR1 <- purrr::map(1:length(selex_t),
-                           ~est_logistic_normal(start_sigma = log(10),
-                                                start_rho = 0.1,
-                                                cov_strc = '1DAR1',
-                                                data = data, 
-                                                selex_t = selex_t[.],
-                                                comp_t = 'wtd'))
+# iid
+tictoc::tic()
+future::plan(multisession, workers = 6)
+res_iis_iter <- par_run_iid(data, combs_it)
+future::plan(sequential)
+runtime_test_iid_iter <- tictoc::toc()
 
-# run for unwtd expansion, 1DAR1
-rr_unwtd_1DAR1 <- purrr::map(1:length(selex_t),
-                             ~est_logistic_normal(start_sigma = log(10),
-                                                  start_rho = 0.1,
-                                                  cov_strc = '1DAR1',
-                                                  data = data, 
-                                                  selex_t = selex_t[.],
-                                                  comp_t = 'unwtd'))
+# 1DAR1
+tictoc::tic()
+future::plan(multisession, workers = 6)
+res_1DAR1_iter <- par_run_1DAR1(data, combs_it)
+future::plan(sequential)
+runtime_test_iid_iter <- tictoc::toc()
 
 
+res_iis_iter %>% 
+  tidytable::summarise(mu_sigma = median(sigma),
+                       sd_sigma = sd(sigma), .by = c(selex_type, comp_type))
 
 
+# estimate logistN params overall ----
+# dataframe of selectivity/composition expansion types tested
 
+combs <- tidytable::expand_grid(selex = unique(data$iss$selex_type), 
+                                comp = unique(data$iss$comp_type))
 
+# run for iid
+rr_iid <- purrr::map(1:dim(combs)[1],
+                     ~est_logistic_normal(start_sigma = log(10),
+                                          cov_strc = 'iid',
+                                          data = data, 
+                                          selex_t = combs$selex[.],
+                                          comp_t = combs$comp[.]))
 
-# restructure results
+# run for 1DAR1
+rr_1DAR1 <- purrr::map(1:dim(combs)[1],
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            start_rho = 0.1,
+                                            cov_strc = '1DAR1',
+                                            data = data, 
+                                            selex_t = combs$selex[.],
+                                            comp_t = combs$comp[.]))
 
+# unlist results
 iss_sim %>% 
   tidytable::left_join(
-    # wtd iid
-    do.call(mapply, c(list, rr_wtd_iid, SIMPLIFY = FALSE))$res %>% 
-      tidytable::map_df(., ~as.data.frame(.x), .id = "sel_t") %>% 
+    # iid
+    do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
+      tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
       tidytable::select(selex_type, comp_type, sigma_iid = sigma) %>% 
-      tidytable::bind_rows(
-        # unwtd iid
-        do.call(mapply, c(list, rr_unwtd_iid, SIMPLIFY = FALSE))$res %>% 
-          tidytable::map_df(., ~as.data.frame(.x), .id = "sel_t") %>% 
-          tidytable::select(selex_type, comp_type, sigma_iid = sigma)) %>% 
       tidytable::left_join(
-        # wtd 1DAR1
-        do.call(mapply, c(list, rr_wtd_1DAR1, SIMPLIFY = FALSE))$res %>% 
-          tidytable::map_df(., ~as.data.frame(.x), .id = "sel_t") %>% 
-          tidytable::select(selex_type, comp_type, sigma_1DAR1 = sigma, rho_1DAR1 = rho) %>% 
-          tidytable::bind_rows(
-            # unwtd 1DAR1
-            do.call(mapply, c(list, rr_unwtd_1DAR1, SIMPLIFY = FALSE))$res %>% 
-              tidytable::map_df(., ~as.data.frame(.x), .id = "sel_t") %>% 
-              tidytable::select(selex_type, comp_type, sigma_1DAR1 = sigma, rho_1DAR1 = rho))))
+        # 1DAR1
+        do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
+          tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+          tidytable::select(selex_type, comp_type, sigma_1DAR1 = sigma, rho_1DAR1 = rho)))
+
+res_test %>% 
+  tidytable::summarise(sigma = mean(sigma),
+                       sd_sigma = sd(sigma), .by = c(selex_type, comp_type))
 
 
 
 
+#' function to test iid for each iter in parallel (6 cores)
+#' 
+par_run_iid <- function(data, combs_it){
+  run1 %<-% purrr::map(1:1000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = 'iid',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run2 %<-% purrr::map(1001:2000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = 'iid',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run3 %<-% purrr::map(2001:3000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = 'iid',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run4 %<-% purrr::map(3001:4000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = 'iid',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run5 %<-% purrr::map(4001:5000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = 'iid',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run6 %<-% purrr::map(5001:6000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = 'iid',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  
+  
+  res <- do.call(mapply, c(list, run1, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run2, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run3, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run4, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run5, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run6, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::select(-sim)
+  
+  res
+}
 
+#' function to test 1DAR1 for each iter in parallel (6 cores)
+#' 
+par_run_1DAR1 <- function(data, combs_it){
+  run1 %<-% purrr::map(1:1000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = '1DAR1',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run2 %<-% purrr::map(1001:2000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = '1DAR1',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run3 %<-% purrr::map(2001:3000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = '1DAR1',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run4 %<-% purrr::map(3001:4000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = '1DAR1',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run5 %<-% purrr::map(4001:5000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = '1DAR1',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  run6 %<-% purrr::map(5001:6000, 
+                       ~est_logistic_normal(start_sigma = log(10),
+                                            cov_strc = '1DAR1',
+                                            data = list(exp = data$exp,
+                                                        obs = data$obs[sim == combs_it$iter[.]],
+                                                        iss = data$iss), 
+                                            selex_t = combs_it$selex[.],
+                                            comp_t = combs_it$comp[.])) %seed% TRUE
+  
+  
+  res <- do.call(mapply, c(list, run1, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run2, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run3, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run4, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run5, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::bind_rows(do.call(mapply, c(list, run6, SIMPLIFY = FALSE))$res %>% 
+                           tidytable::map_df(., ~as.data.frame(.x), .id = "sim")) %>% 
+    tidytable::select(-sim)
+  
+  res
+}
