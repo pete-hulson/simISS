@@ -2,6 +2,7 @@
 # load/source stuff ----
 library(tidyverse)
 source(here::here('R', 'base_functions.R'))
+source(here::here('R', 'stats_functions.R'))
 source(here::here('R', 'exp2_functions.R'))
 
 
