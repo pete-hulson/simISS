@@ -92,7 +92,7 @@ if(isTRUE(full_run)){
   
   # test sample size within sampling units (for 250 sampling units)
   if('nSU500' %in% tests){
-    runtime_nSU500 <- test_nSU(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500')
+    runtime_nSU500 <- test_nSU(X, d, pu, pc, pu_cv, su_num = 500, iters, 'S500')
   } else{tictoc::tic();runtime_nSU500 <- tictoc::toc()}
 } else{ # test runs
   # test expansion weighting, selex, & pop'n structure
