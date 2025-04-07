@@ -227,3 +227,168 @@ sim_comp <- function(su_num, sim_popn, su_samp, p_su_samp){
   list(comp = comp, nss = nss, popn_strctr = sim_popn$popn_strctr, n_su = n_su, N_su = N_su)
   
 }
+
+#' Compute negative log likelihood for a logistic-normal
+#'
+#' @param data data list of expected ('true'), observed (simulated), and realized sample size
+#' @param sigma variance parameter (default = NULL)
+#' @param rho correlation parameter (default = NULL)
+#' @param cov_strc covariance structure options ("iid", "1DAR1")
+#' 
+#' @return negative log-likelihood value
+#' 
+#' @export
+#'
+nll_logistic_normal <- function(data,
+                                sigma = NULL,
+                                rho = NULL,
+                                cov_strc = NULL) {
+  
+  # Get observed and predicted data here
+  obs <- data$obs # observed
+  exp <- data$exp # predicted
+  
+  # Get dimensions
+  Ncat <- length(unique(obs$cat)) # number of categories
+  
+  # calculate sigma
+  sigma2 <- data$iss %>% 
+    # tidytable::mutate(sigma2 = sigma^2 / iss) # matt's way where divide by iss
+    tidytable::mutate(sigma2 = sigma^2)
+  
+  # set up covariance matrix
+  # for iid covariance structure
+  if(cov_strc == "iid"){
+    covmat <- diag(rep(as.numeric(sigma2 %>% 
+                                    tidytable::select(sigma2)), Ncat))
+  }
+  # for 1DAR1 covariance structure
+  if(cov_strc == "1DAR1"){
+    corrMatrix <- matrix(0, nrow = Ncat, ncol = Ncat)
+    for (i in 1:Ncat) {
+      for (j in 1:Ncat) {
+        # Calculate the correlation based on the lag distance
+        corrMatrix[i, j] <- rho^(abs(i - j))
+      } # end i
+    } # end j
+    covmat <-  as.numeric(sigma2 %>% 
+                            tidytable::select(sigma2)) * corrMatrix
+  }
+  
+  # do logistic transformation on observed values
+  tmp_Obs <- obs %>% 
+    tidytable::filter(cat != Ncat) %>% 
+    tidytable::left_join(obs %>% 
+                           tidytable::filter(cat == Ncat) %>% 
+                           tidytable::select(sim, selex_type, comp_type, p_Ncat = p_obs)) %>% 
+    tidytable::mutate(tmp_Obs = log(p_obs) - log(p_Ncat)) %>% 
+    tidytable::select(sim, cat, selex_type, comp_type, tmp_Obs)
+  
+  # do logistic transformation on expected values
+  mu <- exp %>% 
+    tidytable::filter(cat != Ncat) %>% 
+    tidytable::mutate(mu = log(p_true) - 
+                        log(as.numeric(exp %>% 
+                                         tidytable::filter(cat == Ncat) %>% 
+                                         tidytable::select(p_true)))) %>% 
+    tidytable::select(cat, selex_type, mu)
+  
+  # compute negative log-likelihood
+  negloglik <- as.numeric(tmp_Obs %>% 
+                            tidytable::left_join(mu) %>% 
+                            tidytable::summarise(negloglik = -1 * RTMB::dmvnorm(tmp_Obs, mu, covmat[-nrow(covmat), -ncol(covmat)], log = TRUE),
+                                                 .by = sim) %>% 
+                            tidytable::summarise(negloglik = sum(negloglik)))
+  
+  return(negloglik)
+}
+
+#' Function to estimate logistic-normal parameters
+#'
+#' @param start_sigma starting value for sigma (default = NULL)
+#' @param start_rho Starting value for correlation (default = NULL, bound between -1 and 1)
+#' @param cov_strc covariance structure options ("iid", "1DAR1")
+#' @param data data list of expected ('true'), observed (simulated), and realized sample size
+#' @param selex_t selectivity option (default = NULL)
+#' @param comp_t composition expansion option (default = NULL)
+#' 
+#' @return estimated parameters for logistic-normal distribution
+#' 
+#' @export
+#'
+est_logistic_normal <- function(start_sigma = NULL,
+                                start_rho = NULL,
+                                cov_strc = NULL,
+                                data = NULL, 
+                                selex_t = NULL,
+                                comp_t = NULL){
+  
+  # for 'iid' covariance structure
+  if(cov_strc == 'iid'){
+    # Define new likelihood function to minimize
+    negloglik <- function(pars, data){
+      sigma <- exp(pars[1]) # gets squared later 
+      nLL <- nll_logistic_normal(data = data, 
+                                 sigma = sigma,
+                                 cov_strc = cov_strc)
+      return(nLL)
+    } # end likelihood function
+    
+    # minimize
+    fit <- nlminb(start = start_sigma, 
+                  objective = negloglik, 
+                  data = list(obs = data$obs %>% 
+                                tidytable::filter(selex_type == selex_t,
+                                                  comp_type == comp_t),
+                              exp = data$exp %>% 
+                                tidytable::filter(selex_type == selex_t),
+                              iss =  data$iss %>% 
+                                tidytable::filter(selex_type == selex_t,
+                                                  comp_type == comp_t)), 
+                  hessian = TRUE, 
+                  control = list(iter.max = 1e7,
+                                 eval.max = 1e7, 
+                                 rel.tol = 1e-10))
+    
+    # list results
+    res <- list(res = data.frame(sigma = exp(fit$par), selex_type = selex_t, comp_type = comp_t))
+  }
+  
+  # for 1DAR1 covariance structure
+  if(cov_strc == '1DAR1'){
+    # Define new likelihood function to minimize
+    rho_trans <- function(x) 2/(1+ exp(-2 * x)) - 1
+    negloglik <- function(pars, data){
+      sigma <- exp(pars[1]) # gets squared later 
+      rho <- rho_trans(pars[2]) # constrain estimation to -1 and 1
+      nLL <- nll_logistic_normal(data = data, 
+                                 sigma = sigma,
+                                 rho = rho,
+                                 cov_strc = cov_strc)
+      return(nLL)
+    }
+    
+    # minimize
+    fit <- nlminb(start = c(start_sigma, start_rho), 
+                  objective = negloglik, 
+                  data = list(obs = data$obs %>% 
+                                tidytable::filter(selex_type == selex_t,
+                                                  comp_type == comp_t),
+                              exp = data$exp %>% 
+                                tidytable::filter(selex_type == selex_t),
+                              iss =  data$iss %>% 
+                                tidytable::filter(selex_type == selex_t,
+                                                  comp_type == comp_t)), 
+                  hessian = TRUE, 
+                  control = list(iter.max = 1e7,
+                                 eval.max = 1e7, 
+                                 rel.tol = 1e-10))
+    
+    # list results
+    res <- list(res = data.frame(sigma = exp(fit$par[1]), rho = fit$par[2], selex_type = selex_t, comp_type = comp_t))
+    
+  }
+  
+  # return results
+  res
+}
