@@ -339,7 +339,7 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
       tidytable::map_df(., ~as.data.frame(.x), .id = "rep") %>% 
       tidytable::mutate(facet = factor(paste0(test_name, " = ", test), levels = paste0(test_name, " = ", scales::percent(test_vec))))
   } else{
-    res <- purrr::map(1:length(rr), ~(do.call(mapply, c(list, rr[[.]], SIMPLIFY = FALSE))$iss_sim %>% 
+    res <- purrr::map(1:length(rr), ~(do.call(mapply, c(list, rr[[.]], SIMPLIFY = FALSE))$stats %>% 
                                         tidytable::map_df(., ~as.data.frame(.x), .id = "test") %>% 
                                         tidytable::mutate(test = dplyr::case_when(test == 1 ~ test_vec[1],
                                                                                   test == 2 ~ test_vec[2],

@@ -21,7 +21,7 @@ full_run = FALSE
 sim_reps <- 5
 
 # number of desired simulation replicates
-X <- 1000
+X <- 500
 
 # number of bootstrap iterations
 iters <- 1000
@@ -71,7 +71,7 @@ if(isTRUE(full_run)){
 
 # calc runtime for X simulations
 if(isTRUE(full_run)){
-  cat("Run took", (runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, "hrs")
+  cat("Run took", round((runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, digits = 1), "hrs")
 } else{
-  cat("Run is estimated to take", (runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60, "hrs")
+  cat("Run is estimated to take", round((runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60, digits = 1), "hrs")
 }
