@@ -2,13 +2,13 @@
 #'
 #' @param rr list of replicated results from sim_comp() function
 #' @param sim_popn list of results for simulated population from get_popn() function
-
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
 #' 
 #' @return estimates of input sample size and logistic-normal parameters
 #' 
 #' @export
 #'
-est_stats <- function(rr, sim_popn){
+est_stats <- function(rr, sim_popn, cov_strc){
   
   # unlist results
   res_sim <- do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$comp %>% 
@@ -66,34 +66,51 @@ est_stats <- function(rr, sim_popn){
                                   comp = unique(data$iss$comp_type))
   
   # run for iid
-  rr_iid <- purrr::map(1:dim(combs)[1],
-                       ~est_logistic_normal(start_sigma = log(10),
-                                            cov_strc = 'iid',
-                                            data = data, 
-                                            selex_t = combs$selex[.],
-                                            comp_t = combs$comp[.]))
-  
-  # run for 1DAR1
-  rr_1DAR1 <- purrr::map(1:dim(combs)[1],
+  if('iid' %in% cov_strc){
+    rr_iid <- purrr::map(1:dim(combs)[1],
                          ~est_logistic_normal(start_sigma = log(10),
-                                              start_rho = 0.1,
-                                              cov_strc = '1DAR1',
+                                              cov_strc = 'iid',
                                               data = data, 
                                               selex_t = combs$selex[.],
                                               comp_t = combs$comp[.]))
+  }
+  
+  # run for 1DAR1
+  if('1DAR1' %in% cov_strc){
+    rr_1DAR1 <- purrr::map(1:dim(combs)[1],
+                           ~est_logistic_normal(start_sigma = log(10),
+                                                start_rho = 0.1,
+                                                cov_strc = '1DAR1',
+                                                data = data, 
+                                                selex_t = combs$selex[.],
+                                                comp_t = combs$comp[.]))
+  }
   
   # unlist results
-  # iid
-  do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-    tidytable::select(selex_type, comp_type, sigma_iid = sigma) %>% 
-    tidytable::left_join(
-      # 1DAR1
-      do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
-        tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-        tidytable::select(selex_type, comp_type, sigma_1DAR1 = sigma, rho_1DAR1 = rho)) -> logistN_sim
   
-  
+  if('iid' %in% cov_strc & '1DAR1' %in% cov_strc){
+    # iid
+    do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
+      tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+      tidytable::select(selex_type, comp_type, sigma_iid = sigma) %>% 
+      tidytable::left_join(
+        # 1DAR1
+        do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
+          tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+          tidytable::select(selex_type, comp_type, sigma_1DAR1 = sigma, rho_1DAR1 = rho)) -> logistN_sim
+  }
+  if(length(cov_strc) == 1 & 'iid' %in% cov_strc){
+    # iid
+    do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
+      tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+      tidytable::select(selex_type, comp_type, sigma_iid = sigma) -> logistN_sim
+  }
+  if(length(cov_strc) == 1 & '1DAR1' %in% cov_strc){
+    # 1DAR1
+    do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
+      tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+      tidytable::select(selex_type, comp_type, sigma_1DAR1 = sigma, rho_1DAR1 = rho) -> logistN_sim
+  }
   
   # put results together
   iss_sim %>% 
