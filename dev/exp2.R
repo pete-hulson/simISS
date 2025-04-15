@@ -24,7 +24,7 @@ sim_reps <- 5
 X <- 500
 
 # number of bootstrap iterations
-iters <- 1000
+iters <- 500
 
 ## sampling parameters ----
 
