@@ -112,9 +112,28 @@ est_stats <- function(rr, sim_popn, cov_strc){
       tidytable::select(selex_type, comp_type, sigma_1DAR1 = sigma, rho_1DAR1 = rho) -> logistN_sim
   }
   
+  # dirichlet-multinomial statistic ----
+  
+  # dataframe of selectivity/composition expansion types tested
+  combs <- tidytable::expand_grid(selex = unique(data$iss$selex_type), 
+                                  comp = unique(data$iss$comp_type))
+  
+  
+  rr_DM <- purrr::map(1:dim(combs)[1],
+                         ~est_dirmult(rr, 
+                                      sim_popn, 
+                                      selex_t = combs$selex[.],
+                                      comp_t = combs$comp[.]))
+  
+  
+  DM_sim <- do.call(mapply, c(list, rr_DM, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+    tidytable::select(-comb)
+  
   # put results together
   iss_sim %>% 
-    tidytable::left_join(logistN_sim) -> res
+    tidytable::left_join(logistN_sim) %>% 
+    tidytable::left_join(DM_sim) -> res
   
   res
 }
@@ -284,3 +303,110 @@ est_logistic_normal <- function(start_sigma = NULL,
   # return results
   res
 }
+
+#' Dirichlet-Multinomial likelihood
+#' 
+#' @param obs observed proportions
+#' @param pred predicted proportions
+#' @param Ntotal total sample size
+#' @param ln_theta D-M parameters
+#' @param give_log boolean, whether to return log-likelihood
+#' 
+#' @return D-M likelihood value
+#' 
+#' @export
+#' 
+ddirmult <- function(obs, pred, Ntotal, ln_theta, give_log = TRUE) {
+  # Set up function variables
+  n_c = length(obs) # number of categories
+  p_exp = pred # expected values container
+  p_obs = obs # observed values container
+  dirichlet_Parm = exp(ln_theta) * Ntotal # Dirichlet alpha parameters
+  
+  # set up pdf
+  logres = lgamma(Ntotal + 1)
+  for(c in 1:n_c) logres = logres - lgamma(Ntotal*p_obs[c]+1) # integration constant
+  logres = logres + lgamma(dirichlet_Parm) - lgamma(Ntotal+dirichlet_Parm) # 2nd term in formula
+  
+  # Summation in 3rd term in formula
+  for(c in 1:n_c) {
+    logres = logres + lgamma(Ntotal*p_obs[c] + dirichlet_Parm*p_exp[c])
+    logres = logres - lgamma(dirichlet_Parm * p_exp[c])
+  } # end c
+  
+  if(give_log == TRUE) return(logres)
+  else return(exp(logres))
+} # end function
+
+#' Function to estimate Dirichlet-Multinomial parameter
+#'
+#' @param rr list of simulated (i.e., observed) composition data
+#' @param sim_popn 'true' simulated population
+#' @param selex_t selectivity option (default = NULL)
+#' @param comp_t composition expansion option (default = NULL)
+#' 
+#' @return estimated parameters for D-M distribution
+#' 
+#' @export
+#'
+est_dirmult <- function(rr, 
+                        sim_popn, 
+                        selex_t = NULL,
+                        comp_t = NULL){
+
+  # observed
+  o <- do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$comp %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim")  %>% 
+    tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd')) %>% 
+    tidytable::rename(comp_type = name, p_obs = value) %>% 
+    tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
+                                            .default = 'unwtd')) %>%
+    tidytable::filter(selex_type == selex_t,
+                      comp_type == comp_t) %>% 
+    tidytable::pivot_wider(names_from = cat, values_from = p_obs) %>% 
+    tidytable::select(-c(sim, selex_type, comp_type)) %>% 
+    as.matrix(.)
+  
+  # Ntotal
+  N <- do.call(mapply, c(list, rr, SIMPLIFY = FALSE))$nss %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
+    tidytable::select(nss) %>% 
+    as.matrix(.)
+
+  # true
+  e <- (sim_popn$p_true %>% 
+          tidytable::filter(selex_type == selex_t))$p_true
+  
+  # define model
+  ddirmult_all <- function(pars) {
+    RTMB::getAll(data, pars)
+    n_yrs = nrow(data$o)
+    theta = exp(ln_theta)
+    nll = 0
+    for(i in 1:n_yrs) nll = nll - ddirmult(o[i,], e, N[i,], ln_theta, TRUE)
+    ess = (1 + theta * iss) / (1 + theta)
+    RTMB::REPORT(ess)
+    return(nll)
+  }
+  
+  # run model
+  data <- list(o = o, N = N, e = e)
+  pars <- list(ln_theta = log(3))
+  
+  obj <- RTMB::MakeADFun(ddirmult_all, pars)
+  
+  invisible(capture.output(opt <- stats::nlminb(obj$par, obj$fn, obj$gr,
+                                                control = list(iter.max = 1e5, eval.max = 1e5, rel.tol = 1e-15))))
+
+  res <- list(res = data.frame(theta = as.numeric(exp(opt$par)), selex_type = selex_t, comp_type = comp_t))
+  
+  res
+  
+}
+
+
+
+
+
+
+
