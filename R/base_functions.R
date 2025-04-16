@@ -62,7 +62,7 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
   ptwid_pu <- purrr::map(1:pu, ~data.frame(cat = 1:pc, p_dist = dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv) / sum(dnorm(1:pc, mean = mu_cat[.], sd = mu_cat[.] * pu_cv)))) %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "popn_unit")
   
-  # set up pop'n units taking into account seelx and pop'n size
+  # set up pop'n units taking into account selex and pop'n size
   p_cpu <- ptwid_pu %>% 
     tidytable::left_join(popn) %>% 
     tidytable::mutate(N_cpu = p_dist * popn,
