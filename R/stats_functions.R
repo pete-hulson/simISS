@@ -153,7 +153,7 @@ est_logistic_normal <- function(cov_strc = NULL,
     as.matrix(.)
   
   # true/expected
-  e <- (sim_popn$p_true %>% 
+  e <- (data$exp %>% 
           tidytable::filter(selex_type == selex_t))$p_true
   
   # run RTMB models
