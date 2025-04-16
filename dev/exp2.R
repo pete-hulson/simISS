@@ -21,7 +21,7 @@ full_run = FALSE
 sim_reps <- 5
 
 # number of desired simulation replicates
-X <- 500
+X <- 250
 
 # number of bootstrap iterations
 iters <- 500
