@@ -18,16 +18,16 @@ source(here::here('R', 'exp3_functions.R'))
 full_run = TRUE
 
 # number of simulation replicates for testing iss axes of influence (exp2)
-sim_reps <- 5
+sim_reps <- 2
 
 # number of bootstrap replicates (exp3)
-bs_iters <- 5
+bs_iters <- 2
 
 # number of desired bootstrap replicates
-X <- 500
+X <- 100
 
 # number of bootstrap iterations
-iters <- 1000
+iters <- 500
 
 
 ## sampling parameters ----
@@ -103,13 +103,13 @@ if(numCore < 10){
 if(isTRUE(full_run)){
   tictoc::tic()
   future::plan(multisession, workers = 7)
-  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
 }else{
   tictoc::tic()
   future::plan(multisession, workers = 7)
-  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
 }
@@ -117,8 +117,8 @@ if(isTRUE(full_run)){
 
 # calc runtime test for X runs ----
 if(isTRUE(full_run)){
-  cat("Exp2 run took", (runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, "hrs\n")
-  cat("Exp3 run took", (runtime_test_exp3$toc - runtime_test_exp3$tic) / 60 / 60, "hrs")
+  cat("Exp2 run took", round((runtime_test_exp2$toc - runtime_test_exp2$tic) / 60 / 60, digits = 1), "hrs\n")
+  cat("Exp3 run took", round((runtime_test_exp3$toc - runtime_test_exp3$tic) / 60 / 60, digits = 1), "hrs")
 } else{
   runtime_exp2 <- round((runtime_test_exp2$toc - runtime_test_exp2$tic) / (60 * sim_reps) * X / 60, digits = 1)
   cat("Exp2 run is estimated to take", runtime_exp2, "hrs\n")
