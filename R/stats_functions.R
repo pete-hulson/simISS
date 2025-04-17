@@ -10,12 +10,36 @@
 #'
 est_stats <- function(rr_sim, sim_popn, cov_strc){
   
+  # set up data ----
   # unlist results
   res_sim <- do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
     tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd'), names_to = 'comp_type', values_to = 'p_obs') %>% 
     tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
                                             .default = 'unwtd'))
+  
+  # remove sims with 0's
+  sim_rm <- res_sim %>% 
+    tidytable::filter(p_obs == 0) %>% 
+    tidytable::distinct(sim, selex_type) %>% 
+    tidytable::mutate(rem = 1)
+  
+  res_sim <- res_sim %>% 
+    tidytable::left_join(sim_rm) %>% 
+    tidytable::filter(is.na(rem)) %>% 
+    tidytable::select(-rem)
+  
+  # set up data list
+  data <- list(exp = sim_popn$p_true %>% 
+                 tidytable::select(-N_c), 
+               obs = res_sim,
+               N = do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
+                 tidytable::map_df(., ~as.data.frame(.x), .id = "sim"))
+  
+  
+  # combinations of selectivity/composition expansion types tested
+  combs <- tidytable::expand_grid(selex = unique(data$obs$selex_type), 
+                                  comp = unique(data$obs$comp_type))
   
   # input sample size statistic ----
   iss_sim <- res_sim %>% 
@@ -27,18 +51,6 @@ est_stats <- function(rr_sim, sim_popn, cov_strc){
   
   
   # logistic-normal statistics ----
-  
-  # set up data list
-  data <- list(exp = sim_popn$p_true %>% 
-                 tidytable::select(-N_c), 
-               obs = res_sim,
-               N = do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
-                 tidytable::map_df(., ~as.data.frame(.x), .id = "sim"))
-
-  
-  # combinations of selectivity/composition expansion types tested
-  combs <- tidytable::expand_grid(selex = unique(data$obs$selex_type), 
-                                  comp = unique(data$obs$comp_type))
   
   # run for iid
   if('iid' %in% cov_strc){
