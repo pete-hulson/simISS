@@ -296,16 +296,16 @@ plot_base <- function(rr){
   # plot results by population structure
   plot_dat <- res %>% 
     tidytable::select(-c(sigma_1DAR1, rho_1DAR1, ess_DM)) %>% 
-    tidytable::pivot_longer(cols = c(iss, sigma_iid, theta)) %>% 
-    tidytable::mutate(name = case_when(name == 'iss' ~ 'Mult(ISS)',
-                                       name == 'sigma_iid' ~ 'LogisticN(\u03C3)',
-                                       name == 'theta' ~ 'DM(\u03B8)')) %>% 
+    tidytable::pivot_longer(cols = c(iss, sigma_iid, theta), names_to = 'param', values_to = 'stat') %>% 
+    tidytable::mutate(param = case_when(param == 'iss' ~ 'Mult(ISS)',
+                                       param == 'sigma_iid' ~ 'LogisticN(\u03C3)',
+                                       param == 'theta' ~ 'DM(\u03B8)')) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
-                      name = factor(name, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
+                      param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
 
-  plot <- ggplot(data = plot_dat, aes(x = selex_type, y = value, fill = comp_type)) +
+  plot <- ggplot(data = plot_dat, aes(x = selex_type, y = stat, fill = comp_type)) +
     geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
-    facet_grid(name ~ popn_strctr, scales = 'free_y') +
+    facet_grid(param ~ popn_strctr, scales = 'free_y') +
     scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
     theme_bw() +
     scale_x_discrete(guide = guide_axis(angle = 45)) +
@@ -367,23 +367,23 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
   # plot source simulated results by population structure
   plot_dat <- res %>% 
     tidytable::select(-c(sigma_1DAR1, rho_1DAR1, ess_DM)) %>% 
-    tidytable::pivot_longer(cols = c(iss, sigma_iid, theta)) %>% 
-    tidytable::mutate(name = case_when(name == 'iss' ~ 'Mult(ISS)',
-                                       name == 'sigma_iid' ~ 'LogisticN(\u03C3)',
-                                       name == 'theta' ~ 'DM(\u03B8)')) %>% 
+    tidytable::pivot_longer(cols = c(iss, sigma_iid, theta), names_to = 'param', values_to = 'stat') %>% 
+    tidytable::mutate(param = case_when(param == 'iss' ~ 'Mult(ISS)',
+                                        param == 'sigma_iid' ~ 'LogisticN(\u03C3)',
+                                        param == 'theta' ~ 'DM(\u03B8)')) %>% 
     tidytable::left_join(res %>% 
                            tidytable::summarise(nss = mean(mean_nss)) %>% 
-                           tidytable::mutate(name = 'Mult(ISS)')) %>% 
+                           tidytable::mutate(param = 'Mult(ISS)')) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
-                      name = factor(name, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
+                      param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
 
   if(isTRUE(plot_nss)){
-    plot <- ggplot(data = plot_dat, aes(x = facet, y = value, fill = comp_type)) +
+    plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
       geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
       geom_hline(data = plot_dat,
                  aes(yintercept = nss),
                  colour = scico::scico(3, palette = 'roma')[3]) +
-      facet_grid(name ~ popn_strctr, scales = 'free_y') +
+      facet_grid(param ~ popn_strctr, scales = 'free_y') +
       scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
       theme_bw() +
       xlab(test_lab) +
@@ -392,9 +392,9 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
       labs(fill = 'Expansion type') +
       theme(legend.position = "top")
   } else{
-    plot <- ggplot(data = plot_dat, aes(x = facet, y = value, fill = comp_type)) +
+    plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
       geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
-      facet_grid(name ~ popn_strctr, scales = 'free_y') +
+      facet_grid(param ~ popn_strctr, scales = 'free_y') +
       scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
       theme_bw() +
       xlab(test_lab) +
