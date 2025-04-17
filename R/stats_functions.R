@@ -86,8 +86,7 @@ est_stats <- function(rr_sim, sim_popn, cov_strc){
   # dirichlet-multinomial statistic ----
   # run model
   rr_DM <- purrr::map(1:dim(combs)[1],
-                      ~est_dirmult(rr_sim, 
-                                   sim_popn, 
+                      ~est_dirmult(data,
                                    selex_t = combs$selex[.],
                                    comp_t = combs$comp[.]))
   
