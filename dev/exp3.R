@@ -6,6 +6,7 @@
 library(tidyverse)
 library(future)
 source(here::here('R', 'base_functions.R'))
+source(here::here('R', 'stats_functions.R'))
 source(here::here('R', 'exp3_functions.R'))
 
 # set up experiment parameters ----
@@ -19,10 +20,10 @@ full_run = FALSE
 bs_iters <- 5
 
 # number of desired bootstrap replicates
-X <- 1000
+X <- 500
 
 # number of bootstrap iterations
-iters <- 1000
+iters <- 500
 
 ## sampling parameters ----
 

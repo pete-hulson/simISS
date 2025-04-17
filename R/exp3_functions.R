@@ -38,121 +38,218 @@ run_bs_test <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, 
     run6 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
     run7 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
   }
-  
+
   # combine results
   if(numCore > 10){ # using 10 cores
-  rss_se <- run1$rss_se %>% 
-    tidytable::bind_rows(run2$rss_se) %>% 
-    tidytable::bind_rows(run3$rss_se) %>% 
-    tidytable::bind_rows(run4$rss_se) %>% 
-    tidytable::bind_rows(run5$rss_se) %>% 
-    tidytable::bind_rows(run6$rss_se) %>% 
-    tidytable::bind_rows(run7$rss_se) %>% 
-    tidytable::bind_rows(run8$rss_se) %>% 
-    tidytable::bind_rows(run9$rss_se) %>% 
-    tidytable::bind_rows(run10$rss_se) %>% 
-    tidytable::mutate(sim = .I)
+  true_stats <- run1$true_stats %>% 
+    tidytable::mutate(run = 1) %>% 
+    tidytable::bind_rows(run2$true_stats %>% 
+                           tidytable::mutate(run = 2)) %>% 
+    tidytable::bind_rows(run3$true_stats %>% 
+                           tidytable::mutate(run = 3)) %>% 
+    tidytable::bind_rows(run4$true_stats %>% 
+                           tidytable::mutate(run = 4)) %>% 
+    tidytable::bind_rows(run5$true_stats %>% 
+                           tidytable::mutate(run = 5)) %>% 
+    tidytable::bind_rows(run6$true_stats %>% 
+                           tidytable::mutate(run = 6)) %>% 
+    tidytable::bind_rows(run7$true_stats %>% 
+                           tidytable::mutate(run = 7)) %>% 
+    tidytable::bind_rows(run8$true_stats %>% 
+                           tidytable::mutate(run = 8)) %>% 
+    tidytable::bind_rows(run9$true_stats %>% 
+                           tidytable::mutate(run = 9)) %>% 
+    tidytable::bind_rows(run10$true_stats %>% 
+                           tidytable::mutate(run = 10))
   
-  iss_bs <- run1$iss_bs %>% 
-    tidytable::bind_rows(run2$iss_bs) %>% 
-    tidytable::bind_rows(run3$iss_bs) %>% 
-    tidytable::bind_rows(run4$iss_bs) %>% 
-    tidytable::bind_rows(run5$iss_bs) %>% 
-    tidytable::bind_rows(run6$iss_bs) %>% 
-    tidytable::bind_rows(run7$iss_bs) %>% 
-    tidytable::bind_rows(run8$iss_bs) %>% 
-    tidytable::bind_rows(run9$iss_bs) %>% 
-    tidytable::bind_rows(run10$iss_bs) %>% 
-    tidytable::mutate(sim = .I)
+  bs_stats <- run1$bs_stats %>% 
+    tidytable::mutate(run = 1) %>% 
+    tidytable::bind_rows(run2$bs_stats %>% 
+                           tidytable::mutate(run = 2)) %>% 
+    tidytable::bind_rows(run3$bs_stats %>% 
+                           tidytable::mutate(run = 3)) %>% 
+    tidytable::bind_rows(run4$bs_stats %>% 
+                           tidytable::mutate(run = 4)) %>% 
+    tidytable::bind_rows(run5$bs_stats %>% 
+                           tidytable::mutate(run = 5)) %>% 
+    tidytable::bind_rows(run6$bs_stats %>% 
+                           tidytable::mutate(run = 6)) %>% 
+    tidytable::bind_rows(run7$bs_stats %>% 
+                           tidytable::mutate(run = 7)) %>% 
+    tidytable::bind_rows(run8$bs_stats %>% 
+                           tidytable::mutate(run = 8)) %>% 
+    tidytable::bind_rows(run9$bs_stats %>% 
+                           tidytable::mutate(run = 9)) %>% 
+    tidytable::bind_rows(run10$bs_stats %>% 
+                           tidytable::mutate(run = 10))
   
   popn_strctr <- run1$popn_strctr %>% 
-    tidytable::bind_rows(run2$popn_strctr) %>% 
-    tidytable::bind_rows(run3$popn_strctr) %>% 
-    tidytable::bind_rows(run4$popn_strctr) %>% 
-    tidytable::bind_rows(run5$popn_strctr) %>% 
-    tidytable::bind_rows(run6$popn_strctr) %>% 
-    tidytable::bind_rows(run7$popn_strctr) %>% 
-    tidytable::bind_rows(run8$popn_strctr) %>% 
-    tidytable::bind_rows(run9$popn_strctr) %>% 
-    tidytable::bind_rows(run10$popn_strctr) %>% 
-    tidytable::mutate(sim = .I)
+    tidytable::mutate(run = 1) %>% 
+    tidytable::bind_rows(run2$popn_strctr %>% 
+                           tidytable::mutate(run = 2)) %>% 
+    tidytable::bind_rows(run3$popn_strctr %>% 
+                           tidytable::mutate(run = 3)) %>% 
+    tidytable::bind_rows(run4$popn_strctr %>% 
+                           tidytable::mutate(run = 4)) %>% 
+    tidytable::bind_rows(run5$popn_strctr %>% 
+                           tidytable::mutate(run = 5)) %>% 
+    tidytable::bind_rows(run6$popn_strctr %>% 
+                           tidytable::mutate(run = 6)) %>% 
+    tidytable::bind_rows(run7$popn_strctr %>% 
+                           tidytable::mutate(run = 7)) %>% 
+    tidytable::bind_rows(run8$popn_strctr %>% 
+                           tidytable::mutate(run = 8)) %>% 
+    tidytable::bind_rows(run9$popn_strctr %>% 
+                           tidytable::mutate(run = 9)) %>% 
+    tidytable::bind_rows(run10$popn_strctr %>% 
+                           tidytable::mutate(run = 10))
   
-  res <- list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = popn_strctr)
+  res <- list(true_stats = true_stats, bs_stats = bs_stats, popn_strctr = popn_strctr)
   
   # save results
   saveRDS(res,
           file = here::here('output', paste0('exp3_bs.rds')))
   
   } else{ # using 7 cores
-    rss_se <- run1$rss_se %>% 
-      tidytable::bind_rows(run2$rss_se) %>% 
-      tidytable::bind_rows(run3$rss_se) %>% 
-      tidytable::bind_rows(run4$rss_se) %>% 
-      tidytable::bind_rows(run5$rss_se) %>% 
-      tidytable::bind_rows(run6$rss_se) %>% 
-      tidytable::bind_rows(run7$rss_se) %>% 
-      tidytable::mutate(sim = .I)
+    true_stats <- run1$true_stats %>% 
+      tidytable::mutate(run = 1) %>% 
+      tidytable::bind_rows(run2$true_stats %>% 
+                             tidytable::mutate(run = 2)) %>% 
+      tidytable::bind_rows(run3$true_stats %>% 
+                             tidytable::mutate(run = 3)) %>% 
+      tidytable::bind_rows(run4$true_stats %>% 
+                             tidytable::mutate(run = 4)) %>% 
+      tidytable::bind_rows(run5$true_stats %>% 
+                             tidytable::mutate(run = 5)) %>% 
+      tidytable::bind_rows(run6$true_stats %>% 
+                             tidytable::mutate(run = 6)) %>% 
+      tidytable::bind_rows(run7$true_stats %>% 
+                             tidytable::mutate(run = 7))
     
-    iss_bs <- run1$iss_bs %>% 
-      tidytable::bind_rows(run2$iss_bs) %>% 
-      tidytable::bind_rows(run3$iss_bs) %>% 
-      tidytable::bind_rows(run4$iss_bs) %>% 
-      tidytable::bind_rows(run5$iss_bs) %>% 
-      tidytable::bind_rows(run6$iss_bs) %>% 
-      tidytable::bind_rows(run7$iss_bs) %>% 
-      tidytable::mutate(sim = .I)
+    bs_stats <- run1$bs_stats %>% 
+      tidytable::mutate(run = 1) %>% 
+      tidytable::bind_rows(run2$bs_stats %>% 
+                             tidytable::mutate(run = 2)) %>% 
+      tidytable::bind_rows(run3$bs_stats %>% 
+                             tidytable::mutate(run = 3)) %>% 
+      tidytable::bind_rows(run4$bs_stats %>% 
+                             tidytable::mutate(run = 4)) %>% 
+      tidytable::bind_rows(run5$bs_stats %>% 
+                             tidytable::mutate(run = 5)) %>% 
+      tidytable::bind_rows(run6$bs_stats %>% 
+                             tidytable::mutate(run = 6)) %>% 
+      tidytable::bind_rows(run7$bs_stats %>% 
+                             tidytable::mutate(run = 7))
     
     popn_strctr <- run1$popn_strctr %>% 
-      tidytable::bind_rows(run2$popn_strctr) %>% 
-      tidytable::bind_rows(run3$popn_strctr) %>% 
-      tidytable::bind_rows(run4$popn_strctr) %>% 
-      tidytable::bind_rows(run5$popn_strctr) %>% 
-      tidytable::bind_rows(run6$popn_strctr) %>% 
-      tidytable::bind_rows(run7$popn_strctr) %>% 
-      tidytable::mutate(sim = .I)
+      tidytable::mutate(run = 1) %>% 
+      tidytable::bind_rows(run2$popn_strctr %>% 
+                             tidytable::mutate(run = 2)) %>% 
+      tidytable::bind_rows(run3$popn_strctr %>% 
+                             tidytable::mutate(run = 3)) %>% 
+      tidytable::bind_rows(run4$popn_strctr %>% 
+                             tidytable::mutate(run = 4)) %>% 
+      tidytable::bind_rows(run5$popn_strctr %>% 
+                             tidytable::mutate(run = 5)) %>% 
+      tidytable::bind_rows(run6$popn_strctr %>% 
+                             tidytable::mutate(run = 6)) %>% 
+      tidytable::bind_rows(run7$popn_strctr %>% 
+                             tidytable::mutate(run = 7))
     
-    res <- list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = popn_strctr)
+    res <- list(true_stats = true_stats, bs_stats = bs_stats, popn_strctr = popn_strctr)
     
     # save results
     saveRDS(res,
             file = here::here('output', paste0('exp3_bs.rds')))
     
   }
-  
+
   # plot results
-  true_iss <- rss_se %>%  
-    tidytable::left_join(popn_strctr) %>% 
-    tidytable::summarise(Wtd = psych::harmonic.mean(rss_wtd, zero = FALSE),
-                         Unwtd = psych::harmonic.mean(rss_unwtd, zero = FALSE),
-                         .by = c(selex_type, popn_strctr)) %>% 
-    tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
-    tidytable::rename(type = name, iss = value) %>% 
-    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
-  
-  bs_iss <- iss_bs %>%  
-    tidytable::left_join(popn_strctr) %>%
-    tidytable::rename(Wtd = bs_iss_wtd, Unwtd = bs_iss_unwtd) %>% 
-    tidytable::pivot_longer(cols = c(Wtd, Unwtd)) %>% 
-    tidytable::rename(type = name, iss = value) %>% 
-    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')))
-  
-  bs_plot_popn <- ggplot(data = bs_iss, aes(x = type, y = iss, fill = type)) + 
-    geom_boxplot(alpha = 0.7) +
-    geom_point(data = true_iss, shape = 24, size = 2, fill = 'white', aes(x = type, y = iss)) +
-    facet_grid(selex_type ~ popn_strctr, scales = 'free_y') +
-    scico::scale_color_scico_d(palette = 'roma') +
-    scico::scale_fill_scico_d(palette = 'roma') +
+  # box vs point plot
+  dat_true <- res$true_stats %>%
+    tidytable::left_join(res$popn_strctr)  %>%
+    tidytable::summarise(iss = psych::harmonic.mean(rss, zero = FALSE),
+                         sigma_iid = psych::harmonic.mean(sigma_iid, zero = FALSE),
+                         theta = psych::harmonic.mean(theta, zero = FALSE),
+                         .by = c(selex_type, comp_type, popn_strctr)) %>%
+    tidytable::pivot_longer(cols = c(iss, sigma_iid, theta), names_to = 'param', values_to = 'stat') %>% 
+    tidytable::mutate(param = case_when(param == 'iss' ~ 'Mult(ISS)',
+                                       param == 'sigma_iid' ~ 'LogisticN(\u03C3)',
+                                       param == 'theta' ~ 'DM(\u03B8)')) %>% 
+    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
+                      param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
+
+  dat_bs <- res$bs_stats %>%
+    tidytable::left_join(res$popn_strctr) %>%
+    tidytable::pivot_longer(cols = c(iss_bs, sigma_iid_bs, theta_bs), names_to = 'param', values_to = 'stat') %>% 
+    tidytable::mutate(param = case_when(param == 'iss_bs' ~ 'Mult(ISS)',
+                                        param == 'sigma_iid_bs' ~ 'LogisticN(\u03C3)',
+                                        param == 'theta_bs' ~ 'DM(\u03B8)')) %>% 
+    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
+                      param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
+
+  bs_plot1 <- ggplot(data = dat_bs, aes(x = selex_type, y = stat, fill = comp_type)) +
+    geom_boxplot(position = position_dodge(0.4), width = 0.5, alpha = 0.5) +
+    geom_point(data = dat_true, position = position_dodge(0.4), shape = 24, size = 2) +
+    facet_grid(param ~ popn_strctr, scales = 'free_y') +
+    scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
     theme_bw() +
-    guides(fill = 'none') +
-    ylab("Input sample size (ISS)") +
-    xlab("Composition expansion type")
-  
-  ggsave(filename = "exp3_bs.png",
-         plot = bs_plot_popn,
+    scale_x_discrete(guide = guide_axis(angle = 45)) +
+    xlab('Selectivity shape') +
+    ylab('Composition pdf statistic') +
+    labs(fill = 'Expansion type') +
+    theme(legend.position = "top")
+
+  ggsave(filename = "exp3_bs1.png",
+         plot = bs_plot1,
          path = here::here("figs"),
          width = 6.5,
          height = 5,
          units = "in")
+  
+  
+  # point plot of means
+  dat_all <- res$true_stats %>%
+    tidytable::left_join(res$popn_strctr) %>%
+    tidytable::pivot_longer(cols = c(rss, sigma_iid, theta), names_to = 'param', values_to = 'stat_true') %>% 
+    tidytable::mutate(param = case_when(param == 'rss' ~ 'Mult(ISS)',
+                                        param == 'sigma_iid' ~ 'LogisticN(\u03C3)',
+                                        param == 'theta' ~ 'DM(\u03B8)')) %>% 
+    tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
+                      param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)'))) %>% 
+    tidytable::summarise(stat_true = psych::harmonic.mean(stat_true, zero = FALSE),
+                         .by = c(selex_type, comp_type, popn_strctr, param)) %>% 
+    tidytable::left_join(res$bs_stats %>%
+                           tidytable::left_join(res$popn_strctr) %>%
+                           tidytable::pivot_longer(cols = c(iss_bs, sigma_iid_bs, theta_bs), names_to = 'param', values_to = 'stat_bs') %>% 
+                           tidytable::mutate(param = case_when(param == 'iss_bs' ~ 'Mult(ISS)',
+                                                               param == 'sigma_iid_bs' ~ 'LogisticN(\u03C3)',
+                                                               param == 'theta_bs' ~ 'DM(\u03B8)')) %>% 
+                           tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
+                                             param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)'))) %>% 
+                           tidytable::summarise(stat_bs = psych::harmonic.mean(stat_bs, zero = FALSE),
+                                                .by = c(selex_type, comp_type, popn_strctr, param)))
+  
+  
+  bs_plot2 <- ggplot(data = dat_all, aes(x = stat_true, y = stat_bs, color = comp_type, shape = popn_strctr)) +
+    geom_point(size = 2) +
+    facet_wrap( ~ param, scales = 'free', strip.position = 'right', ncol = 1) +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed') +
+    theme_bw() +
+    scale_color_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+    xlab('True statistic') +
+    ylab('Bootstrap estimated statistic') +
+    labs(color = 'Expansion type',
+         shape = 'Population structure')
+    
+  ggsave(filename = "exp3_bs2.png",
+         plot = bs_plot2,
+         path = here::here("figs"),
+         width = 6.5,
+         height = 5,
+         units = "in")
+  
+  
   
 }
 
@@ -180,16 +277,16 @@ test_bs <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iter
   rr_bs <- purrr::map(1:bs_iters, ~bs_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
   # end timer
   runtime <- tictoc::toc()
-  
+
   # unlist results
-  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$rss_se %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> rss_se
-  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$iss_bs %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> iss_bs
+  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$true_stats %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> true_stats
+  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$bs_stats %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> bs_stats
   do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$popn_strctr %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> popn_strctr
   
-  res <- list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = popn_strctr)
+  res <- list(true_stats = true_stats, bs_stats = bs_stats, popn_strctr = popn_strctr)
   
   res
 }
@@ -257,7 +354,12 @@ bs_samp_event <- function(samp_ev){
                          bs_rss_unwtd = sum(samp_p_unwtd * (1- samp_p_unwtd)) / sum((bs_samp_p_unwtd - samp_p_unwtd) ^ 2),
                          .by = selex_type)
   
-  list(rss_bs = rss_bs, bs_comp = bs_comp)
+  # get sample size
+  nss_bs <- bs_n_su %>% 
+    tidytable::summarise(nss = sum(bs_samp), .by = c(selex_type))
+  
+
+  list(rss_bs = rss_bs, bs_comp = bs_comp, nss_bs = nss_bs)
 }
 
 #' function to replicate bootstrap replication of sampling events
@@ -277,7 +379,7 @@ bs_samp_event <- function(samp_ev){
 #' 
 bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   
-  # get a sample realization
+  # get a sample realization ----
   
   # generate the pop'n
   sim_popn <- get_popn(d, pu, pc, pu_cv, plot = FALSE)
@@ -285,26 +387,142 @@ bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   # generate the sampling event
   samp_ev <- sim_comp(su_num, sim_popn, su_samp, p_su_samp)
   
-  # calculate the realized sample size for the sampling event
-  samp_ev$comp %>% 
-    tidytable::left_join(sim_popn$p_true) %>% 
-    tidytable::summarise(rss_wtd = sum(p_true * (1- p_true)) / sum((samp_p_wtd - p_true) ^ 2),
-                         rss_unwtd = sum(p_true * (1- p_true)) / sum((samp_p_unwtd - p_true) ^ 2),
-                         .by = selex_type) -> rss_se
+  # calculate the 'true' statistic for the sampling event
+
+  # set up data list
+  data <- list(exp = sim_popn$p_true %>% 
+                 tidytable::select(-N_c), 
+               obs = samp_ev$comp %>% 
+                 tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd'), names_to = 'comp_type', values_to = 'p_obs') %>% 
+                 tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
+                                                         .default = 'unwtd'),
+                                   sim = 1),
+               N = samp_ev$nss)
   
-  # run bootstrap of sampling event
-  rr_bs <- purrr::map(1:iters, ~bs_samp_event(samp_ev))
+  # combinations of selectivity/composition expansion types tested
+  combs <- tidytable::expand_grid(selex = unique(data$obs$selex_type), 
+                                  comp = unique(data$obs$comp_type))
   
+  
+  # multinomial statistic (rss)
+  mult_sim <- data$obs %>% 
+    tidytable::left_join(data$exp) %>% 
+    tidytable::summarise(rss = sum(p_true * (1- p_true)) / sum((p_obs - p_true) ^ 2),
+                         .by = c(selex_type, comp_type))
+
+  # logistic-normal statistics (sigma & rho)
+  # estimate parameters
+  rr_iid <- purrr::map(1:dim(combs)[1],
+                       ~est_logistic_normal(cov_strc = 'iid',
+                                            data = data, 
+                                            selex_t = combs$selex[.],
+                                            comp_t = combs$comp[.]))
+  rr_1DAR1 <- purrr::map(1:dim(combs)[1],
+                         ~est_logistic_normal(cov_strc = '1DAR1',
+                                              data = data, 
+                                              selex_t = combs$selex[.],
+                                              comp_t = combs$comp[.]))
+  # get results
+  logistN_sim <- do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+    tidytable::select(selex_type, comp_type, sigma_iid) %>% 
+    tidytable::left_join(
+      do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
+        tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+        tidytable::select(-comb))
+  
+  # dirichlet-multinomial statistic (theta)
+  # estimate parameter
+  rr_DM <- suppressWarnings(purrr::map(1:dim(combs)[1],
+                                       ~est_dirmult(data, 
+                                                    selex_t = combs$selex[.],
+                                                    comp_t = combs$comp[.])))
+
   # unlist results
-  do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$rss_bs %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") -> res_bs
+  DM_sim <- do.call(mapply, c(list, rr_DM, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+    tidytable::select(-comb)
+
+  # put 'true' stats together
+  true_stats <- mult_sim %>% 
+    tidytable::left_join(logistN_sim) %>% 
+    tidytable::left_join(DM_sim) %>% 
+    tidytable::left_join(data$N)
   
-  # calculate bootstrap iss
-  iss_bs <- res_bs %>%     
+
+  # run bootstrap of sampling event ----
+  rr_bs <- purrr::map(1:iters, ~bs_samp_event(samp_ev))
+
+  # set up data list
+  data <- list(exp = samp_ev$comp %>% 
+                 tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd'), names_to = 'comp_type', values_to = 'p_true') %>% 
+                 tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
+                                                         .default = 'unwtd')), 
+               obs = do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$bs_comp %>% 
+                 tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
+                 tidytable::pivot_longer(cols = c('bs_samp_p_wtd', 'bs_samp_p_unwtd'), names_to = 'comp_type', values_to = 'p_obs') %>% 
+                 tidytable::mutate(comp_type = case_when(comp_type == 'bs_samp_p_wtd' ~ 'wtd',
+                                                         .default = 'unwtd')),
+               N = do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$nss_bs %>% 
+                 tidytable::map_df(., ~as.data.frame(.x), .id = "sim"))
+
+  # get bootstrap statistics
+  
+  # multinomial statistic (iss)
+  mult_bs <- do.call(mapply, c(list, rr_bs, SIMPLIFY = FALSE))$rss_bs %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>%     
     tidytable::summarise(bs_iss_wtd = psych::harmonic.mean(bs_rss_wtd, zero = FALSE),
                          bs_iss_unwtd = psych::harmonic.mean(bs_rss_unwtd, zero = FALSE),
-                         .by = selex_type)
+                         .by = selex_type) %>% 
+    tidytable::pivot_longer(cols = c('bs_iss_wtd', 'bs_iss_unwtd'), names_to = 'comp_type', values_to = 'iss_bs') %>% 
+    tidytable::mutate(comp_type = case_when(comp_type == 'bs_iss_wtd' ~ 'wtd',
+                                            .default = 'unwtd'))
   
-  list(rss_se = rss_se, iss_bs = iss_bs, popn_strctr = samp_ev$popn_strctr)
+  # logistic-normal statistics (sigma & rho)
+  # estimate parameters
+  rr_iid <- purrr::map(1:dim(combs)[1],
+                       ~est_logistic_normal(cov_strc = 'iid',
+                                            data = list(exp = data$exp[comp_type == combs$comp[.]],
+                                                        obs = data$obs,
+                                                        N = data$N), 
+                                            selex_t = combs$selex[.],
+                                            comp_t = combs$comp[.]))
+  rr_1DAR1 <- purrr::map(1:dim(combs)[1],
+                         ~est_logistic_normal(cov_strc = '1DAR1',
+                                              data = list(exp = data$exp[comp_type == combs$comp[.]],
+                                                          obs = data$obs,
+                                                          N = data$N), 
+                                              selex_t = combs$selex[.],
+                                              comp_t = combs$comp[.]))
+  # get results
+  logistN_bs <- do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+    tidytable::select(selex_type, comp_type, sigma_iid_bs = sigma_iid) %>% 
+    tidytable::left_join(
+      do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
+        tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+        tidytable::select(selex_type, comp_type, sigma_1DAR1_bs = sigma_1DAR1, rho_1DAR1_bs = rho_1DAR1))
+  
+  # dirichlet-multinomial statistic (theta)
+  # estimate parameter
+  rr_DM <- suppressWarnings(purrr::map(1:dim(combs)[1],
+                                       ~est_dirmult(data = list(exp = data$exp[comp_type == combs$comp[.]],
+                                                                obs = data$obs,
+                                                                N = data$N), 
+                                                    selex_t = combs$selex[.],
+                                                    comp_t = combs$comp[.])))
+  # unlist results
+  DM_bs <- do.call(mapply, c(list, rr_DM, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+    tidytable::select(selex_type, comp_type, theta_bs = theta, ess_DM_bs = ess_DM)
+  
+  # put bootstrap stats together
+  bs_stats <- mult_bs %>% 
+    tidytable::left_join(logistN_bs) %>% 
+    tidytable::left_join(DM_bs)
+
+
+  # output
+  list(true_stats = true_stats, bs_stats = bs_stats, popn_strctr = samp_ev$popn_strctr)
 }
 
