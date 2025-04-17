@@ -13,8 +13,7 @@ est_stats <- function(rr_sim, sim_popn, cov_strc){
   # unlist results
   res_sim <- do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
-    tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd')) %>% 
-    tidytable::rename(comp_type = name, p_obs = value) %>% 
+    tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd'), names_to = 'comp_type', values_to = 'p_obs') %>% 
     tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
                                             .default = 'unwtd'))
   
@@ -32,7 +31,10 @@ est_stats <- function(rr_sim, sim_popn, cov_strc){
   # set up data list
   data <- list(exp = sim_popn$p_true %>% 
                  tidytable::select(-N_c), 
-               obs = res_sim)
+               obs = res_sim,
+               N = do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
+                 tidytable::map_df(., ~as.data.frame(.x), .id = "sim"))
+
   
   # combinations of selectivity/composition expansion types tested
   combs <- tidytable::expand_grid(selex = unique(data$obs$selex_type), 
@@ -105,7 +107,7 @@ est_stats <- function(rr_sim, sim_popn, cov_strc){
 #' Function to estimate logistic-normal parameters
 #'
 #' @param cov_strc covariance structure options ("iid", "1DAR1")
-#' @param data data list of expected ('true') and observed (simulated) composition
+#' @param data data list of expected ('true') and observed (simulated) composition, and total sample size
 #' @param selex_t selectivity option (default = NULL)
 #' @param comp_t composition expansion option (default = NULL)
 #' 
@@ -119,7 +121,6 @@ est_logistic_normal <- function(cov_strc = NULL,
                                 comp_t = NULL){
   
   # set up data
-  
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
     # small constant
@@ -161,6 +162,9 @@ est_logistic_normal <- function(cov_strc = NULL,
   # define iid likelihood functions
   dlogistN_iid <- function(pars){
     library(RTMB)
+    "c" <- RTMB::ADoverload("c")
+    "[<-" <- RTMB::ADoverload("[<-")
+    # load starting values and data
     RTMB::getAll(data, pars)
     # Get dimensions
     n_c = length(e) # number of categories
@@ -177,6 +181,9 @@ est_logistic_normal <- function(cov_strc = NULL,
   # define 1DAR1 likelihood functions
   dlogistN_1DAR1 <- function(pars){
     library(RTMB)
+    "c" <- RTMB::ADoverload("c")
+    "[<-" <- RTMB::ADoverload("[<-")
+    # load starting values and data
     RTMB::getAll(data, pars)
     # Get dimensions
     n_c = length(e) # number of categories
@@ -238,8 +245,7 @@ est_logistic_normal <- function(cov_strc = NULL,
 
 #' Function to estimate Dirichlet-Multinomial parameter
 #'
-#' @param rr list of simulated (i.e., observed) composition data
-#' @param sim_popn 'true' simulated population
+#' @param data data list of expected ('true') and observed (simulated) composition, and total sample size
 #' @param selex_t selectivity option (default = NULL)
 #' @param comp_t composition expansion option (default = NULL)
 #' 
@@ -247,38 +253,60 @@ est_logistic_normal <- function(cov_strc = NULL,
 #' 
 #' @export
 #'
-est_dirmult <- function(rr_sim, 
-                        sim_popn, 
+est_dirmult <- function(data,
                         selex_t = NULL,
                         comp_t = NULL){
   
   # set up data
+  # remove 0's
+  if(any(data$obs == 0) || any(data$exp == 0)) {
+    # small constant
+    eps <- 1e-6
+    
+    # expected
+    data$exp <- data$exp %>% 
+      # add constant in
+      tidytable::mutate(p_true = case_when(p_true == 0 ~ eps,
+                                           .default = p_true)) %>% 
+      # renormalize
+      tidytable::mutate(p_true = p_true / sum(p_true), 
+                        .by = c(selex_type))
+    
+    # observed
+    data$obs <- data$obs %>% 
+      # add constant in
+      tidytable::mutate(p_obs = case_when(p_obs == 0 ~ eps,
+                                          .default = p_obs)) %>% 
+      # renormalize
+      tidytable::mutate(p_obs = p_obs / sum(p_obs), 
+                        .by = c(sim, selex_type, comp_type))
+  }
+  
   # observed
-  o <- do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$comp %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "sim")  %>% 
-    tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd')) %>% 
-    tidytable::rename(comp_type = name, p_obs = value) %>% 
-    tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
-                                            .default = 'unwtd')) %>%
+  o <- data$obs %>% 
     tidytable::filter(selex_type == selex_t,
                       comp_type == comp_t) %>% 
     tidytable::pivot_wider(names_from = cat, values_from = p_obs) %>% 
     tidytable::select(-c(sim, selex_type, comp_type)) %>% 
     as.matrix(.)
+
   # total sample size
-  N <- do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
-    tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
+  N <- data$N %>% 
     tidytable::filter(selex_type == selex_t) %>% 
-    tidytable::select(nss) %>% 
+    tidytable::pull(nss) %>% 
     as.matrix(.)
+
   # true/expected
-  e <- (sim_popn$p_true %>% 
+  e <- (data$exp %>% 
           tidytable::filter(selex_type == selex_t))$p_true
 
   # run model
   # define model
   ddirmult_test <- function(pars) {
     library(RTMB)
+    "c" <- RTMB::ADoverload("c")
+    "[<-" <- RTMB::ADoverload("[<-")
+    # load starting values and data
     RTMB::getAll(data, pars)
     # Set up likelihood variables
     n_c = length(e) # number of categories
