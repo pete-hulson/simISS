@@ -15,16 +15,16 @@ source(here::here('R', 'exp3_functions.R'))
 ## simulation/bootstrap parameters ----
 
 # full run?
-full_run = TRUE
+full_run = FALSE
 
 # number of simulation replicates for testing iss axes of influence (exp2)
-sim_reps <- 2
+sim_reps <- 5
 
 # number of bootstrap replicates (exp3)
-bs_iters <- 2
+bs_iters <- 5
 
-# number of desired bootstrap replicates
-X <- 100
+# number of desired replicates for exp2&3
+X <- 1000
 
 # number of bootstrap iterations
 iters <- 500
@@ -102,13 +102,13 @@ if(numCore < 10){
 
 if(isTRUE(full_run)){
   tictoc::tic()
-  future::plan(multisession, workers = 7)
+  future::plan(multisession, workers = 5)
   run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
 }else{
   tictoc::tic()
-  future::plan(multisession, workers = 7)
+  future::plan(multisession, workers = 5)
   run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
