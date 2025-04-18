@@ -18,24 +18,31 @@ est_stats <- function(rr_sim, sim_popn, cov_strc){
     tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
                                             .default = 'unwtd'))
   
-  # remove sims with 0's
-  sim_rm <- res_sim %>% 
-    tidytable::filter(p_obs == 0) %>% 
-    tidytable::distinct(sim, selex_type) %>% 
-    tidytable::mutate(rem = 1)
-  
-  res_sim <- res_sim %>% 
-    tidytable::left_join(sim_rm) %>% 
-    tidytable::filter(is.na(rem)) %>% 
-    tidytable::select(-rem)
+  # # remove sims with 0's
+  # sim_rm <- res_sim %>% 
+  #   tidytable::filter(p_obs == 0) %>% 
+  #   tidytable::distinct(sim, selex_type) %>% 
+  #   tidytable::mutate(rem = 1)
+  # 
+  # res_sim <- res_sim %>% 
+  #   tidytable::left_join(sim_rm) %>% 
+  #   tidytable::filter(is.na(rem)) %>% 
+  #   tidytable::select(-rem)
   
   # set up data list
+  # data <- list(exp = sim_popn$p_true %>% 
+  #                tidytable::select(-N_c), 
+  #              obs = res_sim,
+  #              N = do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
+  #                tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
+  #                tidytable::left_join(sim_rm) %>% 
+  #                tidytable::filter(is.na(rem)) %>% 
+  #                tidytable::select(-rem))
   data <- list(exp = sim_popn$p_true %>% 
                  tidytable::select(-N_c), 
                obs = res_sim,
                N = do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
                  tidytable::map_df(., ~as.data.frame(.x), .id = "sim"))
-  
   
   # combinations of selectivity/composition expansion types tested
   combs <- tidytable::expand_grid(selex = unique(data$obs$selex_type), 
@@ -135,7 +142,7 @@ est_logistic_normal <- function(cov_strc = NULL,
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
     # small constant
-    eps <- 1e-6
+    eps <- 1e-4
     
     # expected
     data$exp <- data$exp %>% 
@@ -272,7 +279,7 @@ est_dirmult <- function(data,
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
     # small constant
-    eps <- 1e-6
+    eps <- 1e-4
     
     # expected
     data$exp <- data$exp %>% 
@@ -347,7 +354,7 @@ est_dirmult <- function(data,
                                                 control = list(iter.max = 1e5, eval.max = 1e5, rel.tol = 1e-15))))
   # get output
   res <- list(res = data.frame(theta = as.numeric(exp(opt$par)), 
-                               ess_DM = mean(obj$report()$ess), 
+                               ess_DM = mean(obj$report(obj$env$last.par.best)$ess), 
                                selex_type = selex_t, comp_type = comp_t))
   res
   
