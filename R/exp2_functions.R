@@ -20,18 +20,14 @@ run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_sam
   
   runtime_base %<-% test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
   runtime_CV %<-% test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
-  runtime_PU %<-% test_PU(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
   runtime_C %<-% test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
   runtime_SU %<-% test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
-  runtime_nSU_250 %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250', cov_strc) %seed% TRUE
-  runtime_nSU_500 %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500', cov_strc) %seed% TRUE
+  runtime_nSU %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iter, cov_strc) %seed% TRUE
   runtimes <- c((runtime_base$toc - runtime_base$tic),
                 (runtime_CV$toc - runtime_CV$tic),
-                (runtime_PU$toc - runtime_PU$tic),
                 (runtime_C$toc - runtime_C$tic),
                 (runtime_SU$toc - runtime_SU$tic),
-                (runtime_nSU_250$toc - runtime_nSU_250$tic),
-                (runtime_nSU_500$toc - runtime_nSU_500$tic))
+                (runtime_nSU$toc - runtime_nSU$tic))
 }
 
 #' function to test expansion weighting, selectivity, & pop'n structure
@@ -93,41 +89,6 @@ test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_
            test_lab = 'Population unit CV around mean category',
            plot_nss = TRUE,
            fact_perc = TRUE)
-  # end timer
-  runtime <- tictoc::toc()
-  
-  return(runtime)
-}
-
-#' function to test number of pop'n units
-#' 
-#' @param sim_reps number of simulation replicates desired
-#' @param d population exponential decay parameters
-#' @param pc number of population categories (e.g., ages or lengths)
-#' @param pu_cv CV in mean category within a population unit (e.g., spread in ages around mean age within a given school) 
-#' @param su_num total number of sampling units
-#' @param su_samp vector of sampling unit sample sizes
-#' @param p_su_samp vector of probabilities for sampling unit sample sizes
-#' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
-#' 
-#' @return runtime for test
-#' 
-#' @export
-#' 
-test_PU <- function(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc){
-  #start timer
-  tictoc::tic()
-  # set numbers of pop'n units
-  npu_test <- c(25, 100, 250, 500)
-  # run simulation
-  rr_npu <- purrr::map(1:sim_reps, ~purrr::map(1:length(npu_test), ~rep_sim(d, pu = npu_test[.], pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc)))
-  # save & plot results
-  plot_sim(rr = rr_npu, 
-           plot_name = 'Npu', 
-           test_vec = npu_test, 
-           test_name = "PU",
-           test_lab = 'Number of population units')
   # end timer
   runtime <- tictoc::toc()
   
@@ -219,7 +180,7 @@ test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_s
 #' 
 #' @export
 #' 
-test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, plot_name, cov_strc){
+test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc){
   #start timer
   tictoc::tic()
   # set sample size within sampling units
@@ -228,7 +189,7 @@ test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, plot_name, cov_s
   rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters, cov_strc)))
   # save & plot results
   plot_sim(rr = rr_samp, 
-           plot_name = plot_name, 
+           plot_name = 'nsu', 
            test_vec = samp_test, 
            test_name = "n",
            test_lab = 'Number of samples within a sampling unit')
@@ -377,20 +338,20 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
                       param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
 
-  if(isTRUE(plot_nss)){
-    plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
-      geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
-      geom_hline(data = plot_dat,
-                 aes(yintercept = nss),
-                 colour = scico::scico(3, palette = 'roma')[3]) +
-      facet_grid(param ~ popn_strctr, scales = 'free_y') +
-      scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
-      theme_bw() +
-      xlab(test_lab) +
-      scale_x_discrete(guide = guide_axis(angle = 45)) +
-      ylab('Composition pdf statistic') +
-      labs(fill = 'Expansion type') +
-      theme(legend.position = "top")
+ if(isTRUE(plot_nss)){
+   plot <- suppressWarnings(ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
+                              geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
+                              geom_hline(data = plot_dat,
+                                         aes(yintercept = nss),
+                                         colour = scico::scico(3, palette = 'roma')[3]) +
+                              facet_grid(param ~ popn_strctr, scales = 'free_y') +
+                              scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+                              theme_bw() +
+                              xlab(test_lab) +
+                              scale_x_discrete(guide = guide_axis(angle = 45)) +
+                              ylab('Composition pdf statistic') +
+                              labs(fill = 'Expansion type') +
+                              theme(legend.position = "top"))
   } else{
     plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
       geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
@@ -412,6 +373,4 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
          height = 5,
          units = "in")
 }
-
-
 
