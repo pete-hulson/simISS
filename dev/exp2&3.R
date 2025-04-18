@@ -15,16 +15,16 @@ source(here::here('R', 'exp3_functions.R'))
 ## simulation/bootstrap parameters ----
 
 # full run?
-full_run = FALSE
+full_run = TRUE
 
 # number of simulation replicates for testing iss axes of influence (exp2)
-sim_reps <- 5
+sim_reps <- 2
 
 # number of bootstrap replicates (exp3)
-bs_iters <- 5
+bs_iters <- 2
 
 # number of desired replicates for exp2&3
-X <- 1000
+X <- 700
 
 # number of bootstrap iterations
 iters <- 500

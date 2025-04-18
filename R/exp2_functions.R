@@ -22,7 +22,7 @@ run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_sam
   runtime_CV %<-% test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
   runtime_C %<-% test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
   runtime_SU %<-% test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
-  runtime_nSU %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iter, cov_strc) %seed% TRUE
+  runtime_nSU %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc) %seed% TRUE
   runtimes <- c((runtime_base$toc - runtime_base$tic),
                 (runtime_CV$toc - runtime_CV$tic),
                 (runtime_C$toc - runtime_C$tic),
@@ -189,7 +189,7 @@ test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc){
   rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters, cov_strc)))
   # save & plot results
   plot_sim(rr = rr_samp, 
-           plot_name = 'nsu', 
+           plot_name = 'nsu_250', 
            test_vec = samp_test, 
            test_name = "n",
            test_lab = 'Number of samples within a sampling unit')
@@ -265,7 +265,7 @@ plot_base <- function(rr){
                       param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
 
   plot <- ggplot(data = plot_dat, aes(x = selex_type, y = stat, fill = comp_type)) +
-    geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
+    geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +
     facet_grid(param ~ popn_strctr, scales = 'free_y') +
     scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
     theme_bw() +
@@ -339,22 +339,22 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
                       param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
 
  if(isTRUE(plot_nss)){
-   plot <- suppressWarnings(ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
-                              geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
-                              geom_hline(data = plot_dat,
-                                         aes(yintercept = nss),
-                                         colour = scico::scico(3, palette = 'roma')[3]) +
-                              facet_grid(param ~ popn_strctr, scales = 'free_y') +
-                              scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
-                              theme_bw() +
-                              xlab(test_lab) +
-                              scale_x_discrete(guide = guide_axis(angle = 45)) +
-                              ylab('Composition pdf statistic') +
-                              labs(fill = 'Expansion type') +
-                              theme(legend.position = "top"))
+   suppressWarnings(plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
+                      geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +
+                      geom_hline(data = plot_dat,
+                                 aes(yintercept = nss),
+                                 colour = scico::scico(3, palette = 'roma')[3]) +
+                      facet_grid(param ~ popn_strctr, scales = 'free_y') +
+                      scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+                      theme_bw() +
+                      xlab(test_lab) +
+                      scale_x_discrete(guide = guide_axis(angle = 45)) +
+                      ylab('Composition pdf statistic') +
+                      labs(fill = 'Expansion type') +
+                      theme(legend.position = "top"))
   } else{
     plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
-      geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7) +
+      geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +
       facet_grid(param ~ popn_strctr, scales = 'free_y') +
       scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
       theme_bw() +
