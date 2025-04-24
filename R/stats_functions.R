@@ -8,7 +8,7 @@
 #' 
 #' @export
 #'
-est_stats <- function(rr_sim, sim_popn, cov_strc){
+est_stats <- function(rr_sim, sim_popn, cov_strc = c('iid', '1DAR1')){
   
   # set up data ----
   # unlist results
@@ -152,15 +152,18 @@ est_logistic_normal <- function(cov_strc = NULL,
       # renormalize
       tidytable::mutate(p_true = p_true / sum(p_true), 
                         .by = c(selex_type))
-    
-    # observed
+
+    # observed (set zero to 'true' value, which is the mean of the observed)
     data$obs <- data$obs %>% 
+      tidytable::left_join(data$exp) %>% 
       # add constant in
-      tidytable::mutate(p_obs = case_when(p_obs == 0 ~ eps,
-                                          .default = p_obs)) %>% 
+      tidytable::mutate(p_obs = case_when(p_obs == 0 ~ p_true,
+                                          .default = p_obs), 
+                        .by = c(sim, selex_type, comp_type)) %>% 
       # renormalize
       tidytable::mutate(p_obs = p_obs / sum(p_obs), 
-                        .by = c(sim, selex_type, comp_type))
+                        .by = c(sim, selex_type, comp_type)) %>% 
+      tidytable::select(-p_true)
   }
   
   # observed
@@ -290,14 +293,17 @@ est_dirmult <- function(data,
       tidytable::mutate(p_true = p_true / sum(p_true), 
                         .by = c(selex_type))
     
-    # observed
+    # observed (set zero to 'true' value, which is the mean of the observed)
     data$obs <- data$obs %>% 
+      tidytable::left_join(data$exp) %>% 
       # add constant in
-      tidytable::mutate(p_obs = case_when(p_obs == 0 ~ eps,
-                                          .default = p_obs)) %>% 
+      tidytable::mutate(p_obs = case_when(p_obs == 0 ~ p_true,
+                                          .default = p_obs), 
+                        .by = c(sim, selex_type, comp_type)) %>% 
       # renormalize
       tidytable::mutate(p_obs = p_obs / sum(p_obs), 
-                        .by = c(sim, selex_type, comp_type))
+                        .by = c(sim, selex_type, comp_type)) %>% 
+      tidytable::select(-p_true)
   }
   
   # observed

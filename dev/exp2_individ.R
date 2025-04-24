@@ -15,13 +15,13 @@ source(here::here('R', 'exp2_functions.R'))
 full_run = FALSE
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 2
+sim_reps <- 25
 
 # number of desired bootstrap replicates
 X <- 500
 
 # number of bootstrap iterations
-iters <- 1000
+iters <- 500
 
 ## sampling parameters ----
 
@@ -57,7 +57,7 @@ d <- log(0.01) / (1 - pc)
 # all tests
 # tests <- c('base', 'CV', 'PU', 'C', 'SU', 'nSU250', 'nSU500')
 # selected tests
-tests <- c('CV', 'nSU500')
+tests <- c('base')
 
 # full run
 if(isTRUE(full_run)){
