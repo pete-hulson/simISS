@@ -253,7 +253,7 @@ plot_base <- function(rr){
   # save results
   saveRDS(res,
           file = here::here('output', 'exp2_base.rds'))
-  
+
   # plot results by population structure
   plot_dat <- res %>% 
     tidytable::select(-c(sigma_1DAR1, rho_1DAR1, ess_DM)) %>% 
@@ -263,7 +263,7 @@ plot_base <- function(rr){
                                         param == 'theta' ~ 'DM(\u03B8)')) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
                       param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
-  
+
   plot <- ggplot(data = plot_dat, aes(x = selex_type, y = stat, fill = comp_type)) +
     geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +
     facet_grid(param ~ popn_strctr, scales = 'free_y') +
