@@ -63,73 +63,55 @@ tests <- c('base')
 if(isTRUE(full_run)){
   # test expansion weighting, selex, & pop'n structure
   if('base' %in% tests){
-    runtime_base <- test_base(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+    runtime_base <- test_base(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_base <- tictoc::toc()}
   
   # test pop'n unit structure (spread around mean category)
   if('CV' %in% tests){
-    runtime_CV <- test_CV(X, d, pu, pc, su_num, su_samp, p_su_samp, iters)
+    runtime_CV <- test_CV(X, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_CV <- tictoc::toc()}
-  
-  # test number of pop'n units
-  if('PU' %in% tests){
-    runtime_PU <- test_PU(X, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-  } else{tictoc::tic();runtime_PU <- tictoc::toc()}
-  
+
   # test number of categories (i.e., longevity, growth)
   if('C' %in% tests){
-    runtime_C <- test_C(X, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters)
+    runtime_C <- test_C(X, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_C <- tictoc::toc()}
   
   # test number of sampling units (i.e., number of hauls)
   if('SU' %in% tests){
-    runtime_SU <- test_SU(X, d, pu, pc, pu_cv, su_samp, p_su_samp, iters)
+    runtime_SU <- test_SU(X, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_SU <- tictoc::toc()}
   
   # test sample size within sampling units (for 250 sampling units)
   if('nSU250' %in% tests){
-    runtime_nSU250 <- test_nSU(X, d, pu, pc, pu_cv, su_num, iters, 'S250')
+    runtime_nSU250 <- test_nSU(X, d, pu, pc, pu_cv, su_num, iters, 'S250', cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_nSU250 <- tictoc::toc()}
-  
-  # test sample size within sampling units (for 250 sampling units)
-  if('nSU500' %in% tests){
-    runtime_nSU500 <- test_nSU(X, d, pu, pc, pu_cv, su_num = 500, iters, 'S500')
-  } else{tictoc::tic();runtime_nSU500 <- tictoc::toc()}
+
 } else{ # test runs
   # test expansion weighting, selex, & pop'n structure
   if('base' %in% tests){
-    runtime_base <- test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
+    runtime_base <- test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_base <- tictoc::toc()}
   
   # test pop'n unit structure (spread around mean category)
   if('CV' %in% tests){
-    runtime_CV <- test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters)
+    runtime_CV <- test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_CV <- tictoc::toc()}
-  
-  # test number of pop'n units
-  if('PU' %in% tests){
-    runtime_PU <- test_PU(sim_reps, d, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
-  } else{tictoc::tic();runtime_PU <- tictoc::toc()}
-  
+
   # test number of categories (i.e., longevity, growth)
   if('C' %in% tests){
-    runtime_C <- test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters)
+    runtime_C <- test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_C <- tictoc::toc()}
   
   # test number of sampling units (i.e., number of hauls)
   if('SU' %in% tests){
-    runtime_SU <- test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters)
+    runtime_SU <- test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_SU <- tictoc::toc()}
   
   # test sample size within sampling units (for 250 sampling units)
   if('nSU250' %in% tests){
-    runtime_nSU250 <- test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250')
+    runtime_nSU250 <- test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, 'S250', cov_strc = c('iid', '1DAR1'))
   } else{tictoc::tic();runtime_nSU250 <- tictoc::toc()}
-  
-  # test sample size within sampling units (for 250 sampling units)
-  if('nSU500' %in% tests){
-    runtime_nSU500 <- test_nSU(sim_reps, d, pu, pc, pu_cv, su_num = 500, iters, 'S500')
-  } else{tictoc::tic();runtime_nSU500 <- tictoc::toc()}
+
 }
 
 
@@ -137,19 +119,15 @@ if(isTRUE(full_run)){
 if(isTRUE(full_run)){
   cat("Run took", round(((runtime_base$toc - runtime_base$tic) +
                            (runtime_CV$toc - runtime_CV$tic) +
-                           (runtime_PU$toc - runtime_PU$tic) +
                            (runtime_C$toc - runtime_C$tic) +
                            (runtime_SU$toc - runtime_SU$tic) +
-                           (runtime_nSU250$toc - runtime_nSU250$tic) +
-                           (runtime_nSU500$toc - runtime_nSU500$tic)) / 60 / 60, digits = 1), "hrs")
+                           (runtime_nSU250$toc - runtime_nSU250$tic)) / 60 / 60, digits = 1), "hrs")
 
 } else{
     cat("Run is estimated to take", round(((runtime_base$toc - runtime_base$tic) +
                                             (runtime_CV$toc - runtime_CV$tic) +
-                                            (runtime_PU$toc - runtime_PU$tic) +
                                             (runtime_C$toc - runtime_C$tic) +
                                             (runtime_SU$toc - runtime_SU$tic) +
-                                            (runtime_nSU250$toc - runtime_nSU250$tic) +
-                                            (runtime_nSU500$toc - runtime_nSU500$tic)) / 60 / 60  * X / sim_reps, digits = 1), "hrs")
+                                            (runtime_nSU250$toc - runtime_nSU250$tic)) / 60 / 60  * X / sim_reps, digits = 1), "hrs")
 }
 
