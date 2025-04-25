@@ -230,7 +230,7 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_str
                            tidytable::summarise(mean_nss = mean(nss),
                                                 .by = selex_type)) %>% 
     tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$popn_strctr[[1]]) 
-
+  
   # return results
   list(stats = stats)
   
@@ -253,17 +253,17 @@ plot_base <- function(rr){
   # save results
   saveRDS(res,
           file = here::here('output', 'exp2_base.rds'))
-
+  
   # plot results by population structure
   plot_dat <- res %>% 
     tidytable::select(-c(sigma_1DAR1, rho_1DAR1, ess_DM)) %>% 
     tidytable::pivot_longer(cols = c(iss, sigma_iid, theta), names_to = 'param', values_to = 'stat') %>% 
     tidytable::mutate(param = case_when(param == 'iss' ~ 'Mult(ISS)',
-                                       param == 'sigma_iid' ~ 'LogisticN(\u03C3)',
-                                       param == 'theta' ~ 'DM(\u03B8)')) %>% 
+                                        param == 'sigma_iid' ~ 'LogisticN(\u03C3)',
+                                        param == 'theta' ~ 'DM(\u03B8)')) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
                       param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
-
+  
   plot <- ggplot(data = plot_dat, aes(x = selex_type, y = stat, fill = comp_type)) +
     geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +
     facet_grid(param ~ popn_strctr, scales = 'free_y') +
@@ -274,7 +274,7 @@ plot_base <- function(rr){
     ylab('Composition pdf statistic') +
     labs(fill = 'Expansion type') +
     theme(legend.position = "top")
-
+  
   ggsave(filename = "exp2_base.png",
          plot = plot,
          path = here::here("figs"),
@@ -299,7 +299,7 @@ plot_base <- function(rr){
 #' @export
 #' 
 plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FALSE, fact_perc = FALSE){
-
+  
   # unlist results
   if(isTRUE(fact_perc)){
     res <- purrr::map(1:length(rr), ~(do.call(mapply, c(list, rr[[.]], SIMPLIFY = FALSE))$stats %>% 
@@ -324,7 +324,7 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
   # save results
   saveRDS(res,
           file = here::here('output', paste0('exp2_', plot_name, '.rds')))
-
+  
   # plot source simulated results by population structure
   plot_dat <- res %>% 
     tidytable::select(-c(sigma_1DAR1, rho_1DAR1, ess_DM)) %>% 
@@ -337,21 +337,21 @@ plot_sim <- function(rr, plot_name, test_vec, test_name, test_lab, plot_nss = FA
                            tidytable::mutate(param = 'Mult(ISS)')) %>% 
     tidytable::mutate(popn_strctr = factor(popn_strctr, levels = c('recruitment pulse', 'multimodal', 'unimodal')),
                       param = factor(param, levels = c('Mult(ISS)', 'LogisticN(\u03C3)', 'DM(\u03B8)')))
-
- if(isTRUE(plot_nss)){
-   suppressWarnings(plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
-                      geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +
-                      geom_hline(data = plot_dat,
-                                 aes(yintercept = nss),
-                                 colour = scico::scico(3, palette = 'roma')[3]) +
-                      facet_grid(param ~ popn_strctr, scales = 'free_y') +
-                      scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
-                      theme_bw() +
-                      xlab(test_lab) +
-                      scale_x_discrete(guide = guide_axis(angle = 45)) +
-                      ylab('Composition pdf statistic') +
-                      labs(fill = 'Expansion type') +
-                      theme(legend.position = "top"))
+  
+  if(isTRUE(plot_nss)){
+    suppressWarnings(plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
+                       geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +
+                       geom_hline(data = plot_dat,
+                                  aes(yintercept = nss),
+                                  colour = scico::scico(3, palette = 'roma')[3]) +
+                       facet_grid(param ~ popn_strctr, scales = 'free_y') +
+                       scale_fill_manual(values = c(scico::scico(3, palette = 'roma')[1], scico::scico(3, palette = 'roma')[2])) +
+                       theme_bw() +
+                       xlab(test_lab) +
+                       scale_x_discrete(guide = guide_axis(angle = 45)) +
+                       ylab('Composition pdf statistic') +
+                       labs(fill = 'Expansion type') +
+                       theme(legend.position = "top"))
   } else{
     plot <- ggplot(data = plot_dat, aes(x = facet, y = stat, fill = comp_type)) +
       geom_boxplot(aes(fill = comp_type), position = position_dodge(0.4), width = 0.5, alpha = 0.7, outliers = FALSE) +

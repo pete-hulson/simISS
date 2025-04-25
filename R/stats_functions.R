@@ -142,7 +142,7 @@ est_logistic_normal <- function(cov_strc = NULL,
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
     # small constant
-    eps <- 1e-4
+    eps <- 1e-7
     
     # expected
     data$exp <- data$exp %>% 
@@ -153,17 +153,26 @@ est_logistic_normal <- function(cov_strc = NULL,
       tidytable::mutate(p_true = p_true / sum(p_true), 
                         .by = c(selex_type))
 
-    # observed (set zero to 'true' value, which is the mean of the observed)
+    # observed (set zero to small value)
     data$obs <- data$obs %>% 
-      tidytable::left_join(data$exp) %>% 
       # add constant in
-      tidytable::mutate(p_obs = case_when(p_obs == 0 ~ p_true,
-                                          .default = p_obs), 
-                        .by = c(sim, selex_type, comp_type)) %>% 
+      tidytable::mutate(p_obs = case_when(p_obs == 0 ~ eps,
+                                          .default = p_obs)) %>% 
       # renormalize
       tidytable::mutate(p_obs = p_obs / sum(p_obs), 
-                        .by = c(sim, selex_type, comp_type)) %>% 
-      tidytable::select(-p_true)
+                        .by = c(sim, selex_type, comp_type))
+    
+    # # observed (set zero to 'true' value, which is the mean of the observed)
+    # data$obs <- data$obs %>% 
+    #   tidytable::left_join(data$exp) %>% 
+    #   # add constant in
+    #   tidytable::mutate(p_obs = case_when(p_obs == 0 ~ p_true,
+    #                                       .default = p_obs), 
+    #                     .by = c(sim, selex_type, comp_type)) %>% 
+    #   # renormalize
+    #   tidytable::mutate(p_obs = p_obs / sum(p_obs), 
+    #                     .by = c(sim, selex_type, comp_type)) %>% 
+    #   tidytable::select(-p_true)
   }
   
   # observed
