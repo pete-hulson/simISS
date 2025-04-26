@@ -17,27 +17,8 @@ est_stats <- function(rr_sim, sim_popn, cov_strc = c('iid', '1DAR1')){
     tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd'), names_to = 'comp_type', values_to = 'p_obs') %>% 
     tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
                                             .default = 'unwtd'))
-  
-  # # remove sims with 0's
-  # sim_rm <- res_sim %>% 
-  #   tidytable::filter(p_obs == 0) %>% 
-  #   tidytable::distinct(sim, selex_type) %>% 
-  #   tidytable::mutate(rem = 1)
-  # 
-  # res_sim <- res_sim %>% 
-  #   tidytable::left_join(sim_rm) %>% 
-  #   tidytable::filter(is.na(rem)) %>% 
-  #   tidytable::select(-rem)
-  
+
   # set up data list
-  # data <- list(exp = sim_popn$p_true %>% 
-  #                tidytable::select(-N_c), 
-  #              obs = res_sim,
-  #              N = do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
-  #                tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
-  #                tidytable::left_join(sim_rm) %>% 
-  #                tidytable::filter(is.na(rem)) %>% 
-  #                tidytable::select(-rem))
   data <- list(exp = sim_popn$p_true %>% 
                  tidytable::select(-N_c), 
                obs = res_sim,
@@ -142,18 +123,18 @@ est_logistic_normal <- function(cov_strc = NULL,
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
     # small constant
-    eps <- 5e-4
+    eps <- 5e-5
     
     # number of categories/bins
     b <- length(unique(data$exp$cat))
     
-    # set zeros following Aitchison 2003
+    # expected
     data$exp <- data$exp %>%
       tidytable::left_join(data$exp %>%
                              tidytable::filter(p_true == 0) %>% 
                              tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>% 
       tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-      # replace zeros
+      # replace zeros following Aitchison 2003
       tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > 0 ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
                                                                 p_true == 0 ~ eps * (n_0 + 1) * (b - n_0) / b^2),
                                           .default = p_true)) %>% 
@@ -171,7 +152,7 @@ est_logistic_normal <- function(cov_strc = NULL,
     #   tidytable::mutate(p_true = p_true / sum(p_true), 
     #                     .by = c(selex_type))
 
-    # set zeros following Aitchison 2003
+    # observed
     
     data$obs <- data$obs %>%
       tidytable::left_join(data$obs %>%
@@ -325,7 +306,7 @@ est_dirmult <- function(data,
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
     # small constant
-    eps <- 5e-4
+    eps <- 5e-5
     
     # number of categories/bins
     b <- length(unique(data$exp$cat))

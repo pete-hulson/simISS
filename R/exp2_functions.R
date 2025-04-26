@@ -222,7 +222,7 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_str
   
   # run sim loop
   rr_sim <- purrr::map(1:iters, ~sim_comp(su_num, sim_popn, su_samp, p_su_samp))
-  
+
   # estimate statistics & join with other results
   stats <- est_stats(rr_sim, sim_popn, cov_strc) %>% 
     tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
