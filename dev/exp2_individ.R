@@ -15,7 +15,7 @@ source(here::here('R', 'exp2_functions.R'))
 full_run = FALSE
 
 # number of simulation replicates for testing iss axes of influence
-sim_reps <- 25
+sim_reps <- 5
 
 # number of desired bootstrap replicates
 X <- 500

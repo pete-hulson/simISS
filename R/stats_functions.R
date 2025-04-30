@@ -119,11 +119,13 @@ est_logistic_normal <- function(cov_strc = NULL,
                                 selex_t = NULL,
                                 comp_t = NULL){
   
+  rnd = 4
+  
   # set up data
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
     # small constant
-    eps <- 5e-5
+    eps <- 5 * 10 ^ -rnd
     
     # number of categories/bins
     b <- length(unique(data$exp$cat))
@@ -151,11 +153,11 @@ est_logistic_normal <- function(cov_strc = NULL,
     #   # renormalize
     #   tidytable::mutate(p_true = p_true / sum(p_true), 
     #                     .by = c(selex_type))
-
-    # observed
     
     data$obs <- data$obs %>%
+      tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
       tidytable::left_join(data$obs %>%
+                             tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
                              tidytable::filter(p_obs == 0) %>% 
                              tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
       tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
@@ -164,9 +166,10 @@ est_logistic_normal <- function(cov_strc = NULL,
                                                                p_obs == 0 ~ eps * (n_0 + 1) * (b - n_0) / b^2),
                                           .default = p_obs)) %>% 
       # renormalize
-      tidytable::mutate(p_obs = p_obs / sum(p_obs), 
+      tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 
                         .by = c(sim, selex_type, comp_type)) %>% 
       tidytable::select(-n_0)
+
     
     # # observed (set zero to small value)
     # data$obs <- data$obs %>% 
@@ -199,8 +202,8 @@ est_logistic_normal <- function(cov_strc = NULL,
     as.matrix(.)
   
   # true/expected
-  e <- (data$exp %>% 
-          tidytable::filter(selex_type == selex_t))$p_true
+  e <- round((data$exp %>% 
+                tidytable::filter(selex_type == selex_t))$p_true, digits = rnd + 1)
   
   # run RTMB models
   
