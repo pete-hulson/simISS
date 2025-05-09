@@ -124,7 +124,8 @@ est_logistic_normal <- function(cov_strc = NULL,
   if(any(data$obs == 0) || any(data$exp == 0)) {
     
     # small constant
-    eps <- 5e-4
+    rnd <- 4 # digits to round to
+    eps <- 5 * 10 ^ -rnd
     
     # number of categories/bins
     b <- length(unique(data$exp$cat))
@@ -300,7 +301,8 @@ est_dirmult <- function(data,
   if(any(data$obs == 0) || any(data$exp == 0)) {
     
     # small constant
-    eps <- 5e-4
+    rnd <- 4 # digits to round to
+    eps <- 5 * 10 ^ -rnd
     
     # number of categories/bins
     b <- length(unique(data$exp$cat))
