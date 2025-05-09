@@ -470,28 +470,17 @@ bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   
   # logistic-normal statistics (sigma & rho)
   # estimate parameters
-  rr_iid <- purrr::map(1:dim(combs)[1],
-                       ~est_logistic_normal(cov_strc = 'iid',
-                                            data = list(exp = data$exp[comp_type == combs$comp[.]],
+  rr_logistN <- purrr::map(1:dim(combs)[1],
+                       ~est_logistic_normal(data = list(exp = data$exp[comp_type == combs$comp[.]],
                                                         obs = data$obs,
                                                         N = data$N), 
                                             selex_t = combs$selex[.],
                                             comp_t = combs$comp[.]))
-  rr_1DAR1 <- purrr::map(1:dim(combs)[1],
-                         ~est_logistic_normal(cov_strc = '1DAR1',
-                                              data = list(exp = data$exp[comp_type == combs$comp[.]],
-                                                          obs = data$obs,
-                                                          N = data$N), 
-                                              selex_t = combs$selex[.],
-                                              comp_t = combs$comp[.]))
   # get results
-  logistN_bs <- do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
+  logistN_bs <- do.call(mapply, c(list, rr_logistN, SIMPLIFY = FALSE))$res %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-    tidytable::select(selex_type, comp_type, sigma_iid_bs = sigma_iid) %>% 
-    tidytable::left_join(
-      do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
-        tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-        tidytable::select(selex_type, comp_type, sigma_1DAR1_bs = sigma_1DAR1, rho_1DAR1_bs = rho_1DAR1))
+    tidytable::select(-comb)
+    tidytable::rename(sigma_iid_bs = sigma_iid, sigma_1DAR1_bs = sigma_1DAR1, rho_1DAR1_bs = rho_1DAR1)
   
   # dirichlet-multinomial statistic (theta)
   # estimate parameter
