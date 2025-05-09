@@ -38,25 +38,20 @@ est_stats <- function(rr_sim, sim_popn){
   
   
   # logistic-normal statistics ----
-  
-  # run for iid
   rr_logistN <- purrr::map(1:dim(combs)[1],
                            ~est_logistic_normal(data = data, 
                                                 selex_t = combs$selex[.],
                                                 comp_t = combs$comp[.]))
-  
   # unlist results
   do.call(mapply, c(list, rr_logistN, SIMPLIFY = FALSE))$res %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
         tidytable::select(-comb) -> logistN_sim
   
   # dirichlet-multinomial statistic ----
-  # run model
   rr_DM <- purrr::map(1:dim(combs)[1],
                       ~est_dirmult(data,
                                    selex_t = combs$selex[.],
                                    comp_t = combs$comp[.]))
-  
   # unlist results
   DM_sim <- do.call(mapply, c(list, rr_DM, SIMPLIFY = FALSE))$res %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
