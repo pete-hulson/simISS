@@ -2,13 +2,12 @@
 #'
 #' @param rr_sim list of replicated results from sim_comp() function
 #' @param sim_popn list of results for simulated population from get_popn() function
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
 #' 
 #' @return estimates of input sample size and logistic-normal parameters
 #' 
 #' @export
 #'
-est_stats <- function(rr_sim, sim_popn, cov_strc = c('iid', '1DAR1')){
+est_stats <- function(rr_sim, sim_popn){
   
   # set up data ----
   # unlist results
@@ -41,47 +40,15 @@ est_stats <- function(rr_sim, sim_popn, cov_strc = c('iid', '1DAR1')){
   # logistic-normal statistics ----
   
   # run for iid
-  if('iid' %in% cov_strc){
-    rr_iid <- purrr::map(1:dim(combs)[1],
-                         ~est_logistic_normal(cov_strc = 'iid',
-                                              data = data, 
-                                              selex_t = combs$selex[.],
-                                              comp_t = combs$comp[.]))
-  }
-  
-  # run for 1DAR1
-  if('1DAR1' %in% cov_strc){
-    rr_1DAR1 <- purrr::map(1:dim(combs)[1],
-                           ~est_logistic_normal(cov_strc = '1DAR1',
-                                                data = data, 
+  rr_logistN <- purrr::map(1:dim(combs)[1],
+                           ~est_logistic_normal(data = data, 
                                                 selex_t = combs$selex[.],
                                                 comp_t = combs$comp[.]))
-  }
   
   # unlist results
-  if('iid' %in% cov_strc & '1DAR1' %in% cov_strc){
-    # iid
-    do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
-      tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-      tidytable::select(selex_type, comp_type, sigma_iid) %>% 
-      tidytable::left_join(
-        # 1DAR1
-        do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
-          tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-          tidytable::select(-comb)) -> logistN_sim
-  }
-  if(length(cov_strc) == 1 & 'iid' %in% cov_strc){
-    # iid
-    do.call(mapply, c(list, rr_iid, SIMPLIFY = FALSE))$res %>% 
-      tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-      tidytable::select(selex_type, comp_type, sigma_iid) -> logistN_sim
-  }
-  if(length(cov_strc) == 1 & '1DAR1' %in% cov_strc){
-    # 1DAR1
-    do.call(mapply, c(list, rr_1DAR1, SIMPLIFY = FALSE))$res %>% 
-      tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-      tidytable::select(selex_type, comp_type, sigma_1DAR1, rho_1DAR1) -> logistN_sim
-  }
+  do.call(mapply, c(list, rr_logistN, SIMPLIFY = FALSE))$res %>% 
+    tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
+        tidytable::select(-comb) -> logistN_sim
   
   # dirichlet-multinomial statistic ----
   # run model
@@ -105,7 +72,6 @@ est_stats <- function(rr_sim, sim_popn, cov_strc = c('iid', '1DAR1')){
 
 #' Function to estimate logistic-normal parameters
 #'
-#' @param cov_strc covariance structure options ("iid", "1DAR1")
 #' @param data data list of expected ('true') and observed (simulated) composition, and total sample size
 #' @param selex_t selectivity option (default = NULL)
 #' @param comp_t composition expansion option (default = NULL)
@@ -114,15 +80,14 @@ est_stats <- function(rr_sim, sim_popn, cov_strc = c('iid', '1DAR1')){
 #' 
 #' @export
 #'
-est_logistic_normal <- function(cov_strc = NULL,
-                                data = NULL, 
+est_logistic_normal <- function(data = NULL, 
                                 selex_t = NULL,
                                 comp_t = NULL){
   
   # set up data ----
-
+  
   # replace zeros following Aitchison 2003
-
+  
   # set data parameters
   rnd <- 4 # number of digits to round to
   eps <- 5 * 10 ^ -rnd # small constant
@@ -138,7 +103,7 @@ est_logistic_normal <- function(cov_strc = NULL,
                            tidytable::filter(p_true == 0) %>%
                            tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > eps * n_0 * (n_0 + 1) / b^2 ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
+    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
                                                               .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
                                          .default = p_true)) %>% 
     tidytable::mutate(p_true = round(p_true / sum(p_true), digits = rnd + 1)) %>% 
@@ -157,7 +122,7 @@ est_logistic_normal <- function(cov_strc = NULL,
                            tidytable::filter(p_obs == 0) %>% 
                            tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > eps * n_0 * (n_0 + 1) / b^2 ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
+    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
                                                              .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
                                         .default = p_obs)) %>% 
     tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 
@@ -166,7 +131,7 @@ est_logistic_normal <- function(cov_strc = NULL,
     tidytable::pivot_wider(names_from = cat, values_from = p_obs) %>% 
     tidytable::select(-c(sim, selex_type, comp_type)) %>% 
     as.matrix(.)
-
+  
   # run RTMB models ----
   
   # define iid likelihood functions
@@ -219,35 +184,31 @@ est_logistic_normal <- function(cov_strc = NULL,
   }
   
   # for 'iid' covariance structure
-  if(cov_strc == 'iid'){
-    # set up data/parameters
-    data <- list(o = o, e = e)
-    pars <- list(sigma = log(10))
-    # make model
-    obj <- RTMB::MakeADFun(dlogistN_iid, pars)
-    # run model
-    invisible(capture.output(opt <- stats::nlminb(obj$par, obj$fn, obj$gr,
-                                                  control = list(iter.max = 1e5, eval.max = 1e5, rel.tol = 1e-15))))
-    # get output
-    res <- list(res = data.frame(sigma_iid = as.numeric(exp(opt$par)), selex_type = selex_t, comp_type = comp_t))
-  }
+  # set up data/parameters
+  data <- list(o = o, e = e)
+  pars_iid <- list(sigma = log(10))
+  # make model
+  obj_iid <- RTMB::MakeADFun(dlogistN_iid, pars_iid)
+  # run model
+  invisible(capture.output(opt_iid <- stats::nlminb(obj_iid$par, obj_iid$fn, obj_iid$gr,
+                                                    control = list(iter.max = 1e5, eval.max = 1e5, rel.tol = 1e-15))))
   
   # for 1DAR1 covariance structure
-  if(cov_strc == '1DAR1'){
-    # set up data/parameters
-    data <- list(o = o, e = e)
-    pars <- list(sigma = log(10),
-                 rho = 0.1)
-    # make model
-    obj <- RTMB::MakeADFun(dlogistN_1DAR1, pars)
-    # run model
-    invisible(capture.output(opt <- stats::nlminb(obj$par, obj$fn, obj$gr,
-                                                  control = list(iter.max = 1e5, eval.max = 1e5, rel.tol = 1e-15))))
-    # get output
-    res <- list(res = data.frame(sigma_1DAR1 = as.numeric(exp(opt$par[1])),
-                                 rho_1DAR1 = as.numeric(2/(1+ exp(-2 * opt$par[2])) - 1), 
-                                 selex_type = selex_t, comp_type = comp_t))
-  }
+  # set up data/parameters
+  data <- list(o = o, e = e)
+  pars_1DAR1 <- list(sigma = log(10),
+                     rho = 0.1)
+  # make model
+  obj_1DAR1 <- RTMB::MakeADFun(dlogistN_1DAR1, pars_1DAR1)
+  # run model
+  invisible(capture.output(opt_1DAR1 <- stats::nlminb(obj_1DAR1$par, obj_1DAR1$fn, obj_1DAR1$gr,
+                                                      control = list(iter.max = 1e5, eval.max = 1e5, rel.tol = 1e-15))))
+  
+  # get output
+  res <- list(res = data.frame(sigma_iid = as.numeric(exp(opt_iid$par)),
+                               sigma_1DAR1 = as.numeric(exp(opt_1DAR1$par[1])),
+                               rho_1DAR1 = as.numeric(2/(1+ exp(-2 * opt_1DAR1$par[2])) - 1), 
+                               selex_type = selex_t, comp_type = comp_t))
   
   # return results
   res
@@ -286,7 +247,7 @@ est_dirmult <- function(data,
                            tidytable::filter(p_true == 0) %>%
                            tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > eps * n_0 * (n_0 + 1) / b^2 ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
+    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
                                                               .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
                                          .default = p_true)) %>% 
     tidytable::mutate(p_true = round(p_true / sum(p_true), digits = rnd + 1)) %>% 
@@ -305,7 +266,7 @@ est_dirmult <- function(data,
                            tidytable::filter(p_obs == 0) %>% 
                            tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > eps * n_0 * (n_0 + 1) / b^2 ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
+    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
                                                              .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
                                         .default = p_obs)) %>% 
     tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 

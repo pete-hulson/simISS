@@ -9,20 +9,19 @@
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for experiement 2 tests
 #' 
 #' @export
 #' 
-run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
+run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   require(future)
   
-  runtime_base %<-% test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
-  runtime_CV %<-% test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
-  runtime_C %<-% test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
-  runtime_SU %<-% test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
-  runtime_nSU %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc) %seed% TRUE
+  runtime_base %<-% test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_CV %<-% test_CV(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_C %<-% test_C(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_SU %<-% test_SU(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters) %seed% TRUE
+  runtime_nSU %<-% test_nSU(sim_reps, d, pu, pc, pu_cv, su_num, iters) %seed% TRUE
   runtimes <- c((runtime_base$toc - runtime_base$tic),
                 (runtime_CV$toc - runtime_CV$tic),
                 (runtime_C$toc - runtime_C$tic),
@@ -41,17 +40,16 @@ run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_sam
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
+test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   #start timer
   tictoc::tic()
   # run simulation
-  rr_base <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc))
+  rr_base <- purrr::map(1:sim_reps, ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
   # save & plot results
   plot_base(rr_base)
   # end timer
@@ -68,19 +66,18 @@ test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, it
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
+test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters){
   #start timer
   tictoc::tic()
   # set levels of cv
   pu_cv_test <- c(0.1, 0.25, 1, 100)
   # run simulation
-  rr_cv <- purrr::map(1:sim_reps, ~purrr::map(1:length(pu_cv_test), ~rep_sim(d, pu, pc, pu_cv = pu_cv_test[.], su_num, su_samp, p_su_samp, iters, cov_strc)))
+  rr_cv <- purrr::map(1:sim_reps, ~purrr::map(1:length(pu_cv_test), ~rep_sim(d, pu, pc, pu_cv = pu_cv_test[.], su_num, su_samp, p_su_samp, iters)))
   # save & plot results
   plot_sim(rr = rr_cv, 
            plot_name = 'cv', 
@@ -105,19 +102,18 @@ test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
+test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters){
   #start timer
   tictoc::tic()
   # set numbers of categories
   cat_test <- c(10, 15, 25, 50)
   # run simulation
-  rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc)))
+  rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters)))
   # save & plot results
   plot_sim(rr = rr_cat, 
            plot_name = 'Ncat', 
@@ -140,19 +136,18 @@ test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, co
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
+test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters){
   #start timer
   tictoc::tic()
   # set number of sampling units
   su_test <- c(100, 250, 500, 1000)
   # run simulation
-  rr_su <- purrr::map(1:sim_reps, ~purrr::map(1:length(su_test), ~rep_sim(d, pu, pc, pu_cv, su_num = su_test[.], su_samp, p_su_samp, iters, cov_strc)))
+  rr_su <- purrr::map(1:sim_reps, ~purrr::map(1:length(su_test), ~rep_sim(d, pu, pc, pu_cv, su_num = su_test[.], su_samp, p_su_samp, iters)))
   # save & plot results
   plot_sim(rr = rr_su, 
            plot_name = 'Nsu', 
@@ -174,19 +169,18 @@ test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_s
 #' @param pu_cv CV in mean category within a population unit (e.g., spread in ages around mean age within a given school) 
 #' @param su_num total number of sampling units
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc = c('iid', '1DAR1')){
+test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters){
   #start timer
   tictoc::tic()
   # set sample size within sampling units
   samp_test <- c(10, 20, 50, 100)
   # run simulation
-  rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters, cov_strc)))
+  rr_samp <- purrr::map(1:sim_reps, ~purrr::map(1:length(samp_test), ~rep_sim(d, pu, pc, pu_cv, su_num, su_samp = c(samp_test[.], 10), p_su_samp = c(1, 0), iters)))
   # save & plot results
   plot_sim(rr = rr_samp, 
            plot_name = 'nsu_250', 
@@ -209,13 +203,12 @@ test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc = c('ii
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return list of input sample size (by expansion complexity and selectivity form) and nominal sample size (nss)
 #' 
 #' @export
 #' 
-rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
+rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   
   # get simulated pop'n
   sim_popn <- get_popn(d, pu, pc, pu_cv, plot = FALSE)
@@ -224,7 +217,7 @@ rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_str
   rr_sim <- purrr::map(1:iters, ~sim_comp(su_num, sim_popn, su_samp, p_su_samp))
 
   # estimate statistics & join with other results
-  stats <- est_stats(rr_sim, sim_popn, cov_strc) %>% 
+  stats <- est_stats(rr_sim, sim_popn) %>% 
     tidytable::left_join(do.call(mapply, c(list, rr_sim, SIMPLIFY = FALSE))$nss %>% 
                            tidytable::map_df(., ~as.data.frame(.x), .id = "sim") %>% 
                            tidytable::summarise(mean_nss = mean(nss),
