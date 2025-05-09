@@ -9,13 +9,13 @@
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for experiement 2 tests
 #' 
 #' @export
 #' 
-run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc){
+run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
   require(future)
   
   runtime_base %<-% test_base(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc) %seed% TRUE
@@ -41,13 +41,13 @@ run_exp2_tests <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_sam
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc){
+test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
   #start timer
   tictoc::tic()
   # run simulation
@@ -68,13 +68,13 @@ test_base <- function(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, it
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc){
+test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
   #start timer
   tictoc::tic()
   # set levels of cv
@@ -105,13 +105,13 @@ test_CV <- function(sim_reps, d, pu, pc, su_num, su_samp, p_su_samp, iters, cov_
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc){
+test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
   #start timer
   tictoc::tic()
   # set numbers of categories
@@ -140,13 +140,13 @@ test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters, co
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc){
+test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
   #start timer
   tictoc::tic()
   # set number of sampling units
@@ -174,13 +174,13 @@ test_SU <- function(sim_reps, d, pu, pc, pu_cv, su_samp, p_su_samp, iters, cov_s
 #' @param pu_cv CV in mean category within a population unit (e.g., spread in ages around mean age within a given school) 
 #' @param su_num total number of sampling units
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return runtime for test
 #' 
 #' @export
 #' 
-test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc){
+test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc = c('iid', '1DAR1')){
   #start timer
   tictoc::tic()
   # set sample size within sampling units
@@ -209,13 +209,13 @@ test_nSU <- function(sim_reps, d, pu, pc, pu_cv, su_num, iters, cov_strc){
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of iterations that sample pop'n
-#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1")
+#' @param cov_strc logistic-normal covariance structure options ("iid" and/or "1DAR1", default  = c('iid', '1DAR1'))
 #' 
 #' @return list of input sample size (by expansion complexity and selectivity form) and nominal sample size (nss)
 #' 
 #' @export
 #' 
-rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc){
+rep_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1')){
   
   # get simulated pop'n
   sim_popn <- get_popn(d, pu, pc, pu_cv, plot = FALSE)

@@ -17,7 +17,7 @@ est_stats <- function(rr_sim, sim_popn, cov_strc = c('iid', '1DAR1')){
     tidytable::pivot_longer(cols = c('samp_p_wtd', 'samp_p_unwtd'), names_to = 'comp_type', values_to = 'p_obs') %>% 
     tidytable::mutate(comp_type = case_when(comp_type == 'samp_p_wtd' ~ 'wtd',
                                             .default = 'unwtd'))
-
+  
   # set up data list
   data <- list(exp = sim_popn$p_true %>% 
                  tidytable::select(-N_c), 
@@ -119,33 +119,34 @@ est_logistic_normal <- function(cov_strc = NULL,
                                 selex_t = NULL,
                                 comp_t = NULL){
   
-  rnd = 4
-  
   # set up data
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
+    
     # small constant
-    eps <- 5 * 10 ^ -rnd
+    eps <- 5e-4
     
     # number of categories/bins
     b <- length(unique(data$exp$cat))
     
     # expected
     data$exp <- data$exp %>%
+      tidytable::mutate(p_true = round(p_true, digits = rnd)) %>%
       tidytable::left_join(data$exp %>%
-                             tidytable::filter(p_true == 0) %>% 
+                             tidytable::mutate(p_true = round(p_true, digits = rnd)) %>% 
+                             tidytable::filter(p_true == 0) %>%
                              tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>% 
       tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
       # replace zeros following Aitchison 2003
-      tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > 0 ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
-                                                                p_true == 0 ~ eps * (n_0 + 1) * (b - n_0) / b^2),
-                                          .default = p_true)) %>% 
+      tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > eps * n_0 * (n_0 + 1) / b^2 ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
+                                                                .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
+                                           .default = p_true)) %>% 
       # renormalize
       tidytable::mutate(p_true = p_true / sum(p_true), 
                         .by = c(selex_type)) %>% 
       tidytable::select(-n_0)
     
-    # # expected (set zero to small value)
+    # # set zero to small value
     # data$exp <- data$exp %>% 
     #   # add constant in
     #   tidytable::mutate(p_true = case_when(p_true == 0 ~ eps,
@@ -154,6 +155,7 @@ est_logistic_normal <- function(cov_strc = NULL,
     #   tidytable::mutate(p_true = p_true / sum(p_true), 
     #                     .by = c(selex_type))
     
+    # observed
     data$obs <- data$obs %>%
       tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
       tidytable::left_join(data$obs %>%
@@ -161,17 +163,16 @@ est_logistic_normal <- function(cov_strc = NULL,
                              tidytable::filter(p_obs == 0) %>% 
                              tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
       tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-      # replace zeros
-      tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > 0 ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
-                                                               p_obs == 0 ~ eps * (n_0 + 1) * (b - n_0) / b^2),
+      # replace zeros following Aitchison 2003
+      tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > eps * n_0 * (n_0 + 1) / b^2 ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
+                                                               .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
                                           .default = p_obs)) %>% 
       # renormalize
       tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 
                         .by = c(sim, selex_type, comp_type)) %>% 
       tidytable::select(-n_0)
-
     
-    # # observed (set zero to small value)
+    # # set zero to small value
     # data$obs <- data$obs %>% 
     #   # add constant in
     #   tidytable::mutate(p_obs = case_when(p_obs == 0 ~ eps,
@@ -180,17 +181,6 @@ est_logistic_normal <- function(cov_strc = NULL,
     #   tidytable::mutate(p_obs = p_obs / sum(p_obs), 
     #                     .by = c(sim, selex_type, comp_type))
     
-    # # observed (set zero to 'true' value, which is the mean of the observed)
-    # data$obs <- data$obs %>% 
-    #   tidytable::left_join(data$exp) %>% 
-    #   # add constant in
-    #   tidytable::mutate(p_obs = case_when(p_obs == 0 ~ p_true,
-    #                                       .default = p_obs), 
-    #                     .by = c(sim, selex_type, comp_type)) %>% 
-    #   # renormalize
-    #   tidytable::mutate(p_obs = p_obs / sum(p_obs), 
-    #                     .by = c(sim, selex_type, comp_type)) %>% 
-    #   tidytable::select(-p_true)
   }
   
   # observed
@@ -255,7 +245,7 @@ est_logistic_normal <- function(cov_strc = NULL,
     nll = sum(-1 * RTMB::dmvnorm(tmp_Obs, mu, Sigma = covmat[-nrow(covmat), -ncol(covmat)], log = TRUE))
     return(nll)
   }
-
+  
   # for 'iid' covariance structure
   if(cov_strc == 'iid'){
     # set up data/parameters
@@ -308,28 +298,31 @@ est_dirmult <- function(data,
   # set up data
   # remove 0's
   if(any(data$obs == 0) || any(data$exp == 0)) {
+    
     # small constant
-    eps <- 5e-5
+    eps <- 5e-4
     
     # number of categories/bins
     b <- length(unique(data$exp$cat))
     
-    # set zeros following Aitchison 2003
+    # expected
     data$exp <- data$exp %>%
+      tidytable::mutate(p_true = round(p_true, digits = rnd)) %>%
       tidytable::left_join(data$exp %>%
-                             tidytable::filter(p_true == 0) %>% 
+                             tidytable::mutate(p_true = round(p_true, digits = rnd)) %>% 
+                             tidytable::filter(p_true == 0) %>%
                              tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>% 
       tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-      # replace zeros
-      tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > 0 ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
-                                                                p_true == 0 ~ eps * (n_0 + 1) * (b - n_0) / b^2),
+      # replace zeros following Aitchison 2003
+      tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > eps * n_0 * (n_0 + 1) / b^2 ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
+                                                                .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
                                            .default = p_true)) %>% 
       # renormalize
       tidytable::mutate(p_true = p_true / sum(p_true), 
                         .by = c(selex_type)) %>% 
       tidytable::select(-n_0)
     
-    # # expected (set zero to small value)
+    # # set zero to small value
     # data$exp <- data$exp %>% 
     #   # add constant in
     #   tidytable::mutate(p_true = case_when(p_true == 0 ~ eps,
@@ -338,23 +331,24 @@ est_dirmult <- function(data,
     #   tidytable::mutate(p_true = p_true / sum(p_true), 
     #                     .by = c(selex_type))
     
-    # set zeros following Aitchison 2003
-    
+    # observed
     data$obs <- data$obs %>%
+      tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
       tidytable::left_join(data$obs %>%
+                             tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
                              tidytable::filter(p_obs == 0) %>% 
                              tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
       tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-      # replace zeros
-      tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > 0 ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
-                                                               p_obs == 0 ~ eps * (n_0 + 1) * (b - n_0) / b^2),
+      # replace zeros following Aitchison 2003
+      tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > eps * n_0 * (n_0 + 1) / b^2 ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
+                                                               .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
                                           .default = p_obs)) %>% 
       # renormalize
-      tidytable::mutate(p_obs = p_obs / sum(p_obs), 
+      tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 
                         .by = c(sim, selex_type, comp_type)) %>% 
       tidytable::select(-n_0)
     
-    # # observed (set zero to small value)
+    # # set zero to small value
     # data$obs <- data$obs %>% 
     #   # add constant in
     #   tidytable::mutate(p_obs = case_when(p_obs == 0 ~ eps,
@@ -362,18 +356,6 @@ est_dirmult <- function(data,
     #   # renormalize
     #   tidytable::mutate(p_obs = p_obs / sum(p_obs), 
     #                     .by = c(sim, selex_type, comp_type))
-    
-    # # observed (set zero to 'true' value, which is the mean of the observed)
-    # data$obs <- data$obs %>% 
-    #   tidytable::left_join(data$exp) %>% 
-    #   # add constant in
-    #   tidytable::mutate(p_obs = case_when(p_obs == 0 ~ p_true,
-    #                                       .default = p_obs), 
-    #                     .by = c(sim, selex_type, comp_type)) %>% 
-    #   # renormalize
-    #   tidytable::mutate(p_obs = p_obs / sum(p_obs), 
-    #                     .by = c(sim, selex_type, comp_type)) %>% 
-    #   tidytable::select(-p_true)
   }
   
   # observed
@@ -383,17 +365,17 @@ est_dirmult <- function(data,
     tidytable::pivot_wider(names_from = cat, values_from = p_obs) %>% 
     tidytable::select(-c(sim, selex_type, comp_type)) %>% 
     as.matrix(.)
-
+  
   # total sample size
   N <- data$N %>% 
     tidytable::filter(selex_type == selex_t) %>% 
     tidytable::pull(nss) %>% 
     as.matrix(.)
-
+  
   # true/expected
   e <- (data$exp %>% 
           tidytable::filter(selex_type == selex_t))$p_true
-
+  
   # run model
   # define model
   ddirmult_test <- function(pars) {
