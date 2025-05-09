@@ -479,7 +479,7 @@ bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   # get results
   logistN_bs <- do.call(mapply, c(list, rr_logistN, SIMPLIFY = FALSE))$res %>% 
     tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
-    tidytable::select(-comb)
+    tidytable::select(-comb) %>% 
     tidytable::rename(sigma_iid_bs = sigma_iid, sigma_1DAR1_bs = sigma_1DAR1, rho_1DAR1_bs = rho_1DAR1)
   
   # dirichlet-multinomial statistic (theta)
