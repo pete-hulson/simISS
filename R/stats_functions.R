@@ -98,8 +98,8 @@ est_logistic_normal <- function(data = NULL,
                            tidytable::filter(p_true == 0) %>%
                            tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
-                                                              .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
+    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_true - round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd),
+                                                              .default =  round(eps * (n_0 + 1) * (b - n_0) / b^2, digits = rnd)),
                                          .default = p_true)) %>% 
     tidytable::mutate(p_true = round(p_true / sum(p_true), digits = rnd + 1)) %>% 
     tidytable::select(-n_0) %>% 
@@ -117,8 +117,8 @@ est_logistic_normal <- function(data = NULL,
                            tidytable::filter(p_obs == 0) %>% 
                            tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
-                                                             .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
+    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd),
+                                                             .default =  round(eps * (n_0 + 1) * (b - n_0) / b^2, digits = rnd)),
                                         .default = p_obs)) %>% 
     tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 
                       .by = c(sim, selex_type, comp_type)) %>% 
@@ -126,7 +126,24 @@ est_logistic_normal <- function(data = NULL,
     tidytable::pivot_wider(names_from = cat, values_from = p_obs) %>% 
     tidytable::select(-c(sim, selex_type, comp_type)) %>% 
     as.matrix(.)
-  
+
+  # get number of zero's in data
+  num_zero <- data$obs %>%
+    tidytable::filter(selex_type == selex_t,
+                      comp_type == comp_t) %>%
+    tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
+    tidytable::left_join(data$obs %>%
+                           tidytable::filter(selex_type == selex_t,
+                                             comp_type == comp_t) %>%
+                           tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
+                           tidytable::filter(p_obs == 0) %>% 
+                           tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
+    tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
+    tidytable::summarise(num_zero = mean(n_0), .by = c(sim, selex_type, comp_type)) %>% 
+    tidytable::filter(num_zero > 0) %>% 
+    tidytable::summarise(num_zero = length(num_zero)) %>% 
+    tidytable::pull(num_zero)
+
   # run RTMB models ----
   
   # define iid likelihood functions
@@ -203,6 +220,7 @@ est_logistic_normal <- function(data = NULL,
   res <- list(res = data.frame(sigma_iid = as.numeric(exp(opt_iid$par)),
                                sigma_1DAR1 = as.numeric(exp(opt_1DAR1$par[1])),
                                rho_1DAR1 = as.numeric(2/(1+ exp(-2 * opt_1DAR1$par[2])) - 1), 
+                               num_zero = num_zero,
                                selex_type = selex_t, comp_type = comp_t))
   
   # return results
@@ -242,8 +260,8 @@ est_dirmult <- function(data,
                            tidytable::filter(p_true == 0) %>%
                            tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_true - eps * n_0 * (n_0 + 1) / b^2,
-                                                              .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
+    tidytable::mutate(p_true = case_when(n_0 != 0 ~ case_when(p_true > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_true - round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd),
+                                                              .default =  round(eps * (n_0 + 1) * (b - n_0) / b^2, digits = rnd)),
                                          .default = p_true)) %>% 
     tidytable::mutate(p_true = round(p_true / sum(p_true), digits = rnd + 1)) %>% 
     tidytable::select(-n_0) %>% 
@@ -261,8 +279,8 @@ est_dirmult <- function(data,
                            tidytable::filter(p_obs == 0) %>% 
                            tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - eps * n_0 * (n_0 + 1) / b^2,
-                                                             .default =  eps * (n_0 + 1) * (b - n_0) / b^2),
+    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd),
+                                                             .default =  round(eps * (n_0 + 1) * (b - n_0) / b^2, digits = rnd)),
                                         .default = p_obs)) %>% 
     tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 
                       .by = c(sim, selex_type, comp_type)) %>% 
