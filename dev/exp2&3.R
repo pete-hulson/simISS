@@ -21,10 +21,10 @@ full_run = FALSE
 sim_reps <- 10
 
 # number of bootstrap replicates (exp3)
-bs_iters <- 2
+bs_iters <- 10
 
 # number of desired replicates for exp2&3
-X <- 500
+X <- 750
 
 # number of bootstrap iterations
 iters <- 500
@@ -103,13 +103,13 @@ if(numCore < 10){
 if(isTRUE(full_run)){
   tictoc::tic()
   future::plan(multisession, workers = 5)
-  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
+  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
 }else{
   tictoc::tic()
   future::plan(multisession, workers = 5)
-  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
+  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
 }
@@ -129,5 +129,5 @@ if(isTRUE(full_run)){
     runtime_exp3 <- round((runtime_test_exp3$toc - runtime_test_exp3$tic) / (60 * bs_iters) * round(10 * X / 7, digits = 0) / 60, digits = 1)
     cat("Exp3 run is estimated to take", runtime_exp3, "hrs\n")
   }
-  cat("Exp 2&3 total run time estimated to take", round((runtime_exp2 + runtime_exp2) / 24, digits = 1), "days")
+  cat("Exp 2&3 total run time estimated to take", round((runtime_exp2 + runtime_exp3) / 24, digits = 1), "days")
 }
