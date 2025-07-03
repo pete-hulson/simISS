@@ -5,6 +5,7 @@
 # load libraries/source fcns ----
 library(tidyverse)
 library(future)
+library(forcats)
 source(here::here('R', 'base_functions.R'))
 source(here::here('R', 'stats_functions.R'))
 source(here::here('R', 'exp3_functions.R'))
@@ -62,13 +63,13 @@ if(numCore > 10){
   if(isTRUE(full_run)){
     tictoc::tic()
     future::plan(multisession, workers = 10)
-    run_bs_test(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd = FALSE, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   } else{
     tictoc::tic()
     future::plan(multisession, workers = 10)
-    run_bs_test(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd = FALSE, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   }
@@ -79,13 +80,13 @@ if(numCore < 10){
   if(isTRUE(full_run)){
     tictoc::tic()
     future::plan(multisession, workers = 7)
-    run_bs_test(bs_iters = round(10 * X / 7, digits = 0), d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(bs_iters = round(10 * X / 7, digits = 0), d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd = FALSE, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   } else{
     tictoc::tic()
     future::plan(multisession, workers = 7)
-    run_bs_test(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore)
+    run_bs_test(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd = FALSE, numCore)
     future::plan(sequential)
     runtime_test_exp3 <- tictoc::toc()
   }

@@ -9,34 +9,35 @@
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of bootstrap iterations within a sampling event
+#' @param boot_2nd boolean, whether to bootstrap 2nd stage
 #' @param numCore number of cores available for parallel processing (function developed for 10 or 7 cores)
 #' 
 #' @return runtimes for bootstrap tests
 #' 
 #' @export
 #' 
-run_bs_test <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, numCore){
+run_bs_test <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd, numCore){
   
   # define parallel function runs
   if(numCore > 10){ # using 10 cores
-    run1 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run2 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run3 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run4 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run5 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run6 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run7 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run8 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run9 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run10 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run1 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run2 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run3 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run4 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run5 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run6 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run7 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run8 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run9 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run10 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
   } else{ # using 7 cores
-    run1 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run2 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run3 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run4 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run5 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run6 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
-    run7 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters) %seed% TRUE
+    run1 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run2 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run3 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run4 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run5 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run6 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
+    run7 %<-% test_bs(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd) %seed% TRUE
   }
   
   # combine results
@@ -264,17 +265,18 @@ run_bs_test <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, 
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of bootstrap iterations within a sampling event
+#' @param boot_2nd boolean, whether to bootstrap 2nd stage
 #' 
 #' @return list of results including realized sample size (RSS) for generated pop'n, input sample size (ISS) for bootstrap replicates, and pop'n structure (popn_strctr)
 #' 
 #' @export
 #' 
-test_bs <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+test_bs <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd){
   
   #start timer
   tictoc::tic()
   # run simulation
-  rr_bs <- purrr::map(1:bs_iters, ~bs_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters))
+  rr_bs <- purrr::map(1:bs_iters, ~bs_sim(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd))
   # end timer
   runtime <- tictoc::toc()
   
@@ -294,33 +296,44 @@ test_bs <- function(bs_iters, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iter
 #' function to bootstrap a single sampling event realization
 #' 
 #' @param samp_ev list of results from running the sim_comp() function (after running the get_popn() fcn)
+#' @param boot_2nd boolean, whether to bootstrap 2nd stage
 #' 
 #' @return list of bootstrap realized sample size and comp
 #' 
 #' @export
 #' 
-bs_samp_event <- function(samp_ev){
+bs_samp_event <- function(samp_ev, boot_2nd = TRUE){
   
   # bootstrap the sample realization
   
   # get number of sampling units
   su_num <- length(unique(samp_ev$N_su$samp_event))
   
-  # bootsrap realized sampling units (e.g., hauls)
+  # first stage: bootsrap realized sampling units (e.g., hauls)
   bs_su <- data.frame(samp_event = sample(1:su_num, su_num, replace = TRUE)) %>% 
     tidytable::mutate(id = .I)
   
-  # bootstrap samples within sampling unit (e.g., ages/lengths)
-  bs_n_su <- tidytable::expand_grid(bs_samp_event = 1:su_num,
-                                    cat = 1:pc,
-                                    selex_type = samp_ev$nss$selex_type) %>% 
-    tidytable::left_join(bs_su %>% 
-                           tidytable::left_join(samp_ev$n_su) %>% 
-                           tidytable::select(bs_samp_event = id, selex_type, cat, samp) %>% 
-                           tidytable::uncount(samp) %>% 
-                           tidytable::mutate(cat = sample(cat, .N, replace = TRUE), .by = c(bs_samp_event, selex_type)) %>% 
-                           tidytable::summarize(bs_samp = .N, .by = c(bs_samp_event, selex_type, cat))) %>% 
-    tidytable::mutate(bs_samp = case_when(is.na(bs_samp) ~ 0, .default = bs_samp))
+  # second stage: if desired, bootstrap samples within sampling unit (e.g., ages/lengths)
+  if(isTRUE(boot_2nd)){
+    bs_n_su <- tidytable::expand_grid(bs_samp_event = 1:su_num,
+                                      cat = 1:pc,
+                                      selex_type = samp_ev$nss$selex_type) %>% 
+      tidytable::left_join(bs_su %>% 
+                             tidytable::left_join(samp_ev$n_su) %>% 
+                             tidytable::select(bs_samp_event = id, selex_type, cat, samp) %>% 
+                             tidytable::uncount(samp) %>% 
+                             tidytable::mutate(cat = sample(cat, .N, replace = TRUE), .by = c(bs_samp_event, selex_type)) %>% 
+                             tidytable::summarize(bs_samp = .N, .by = c(bs_samp_event, selex_type, cat))) %>% 
+      tidytable::mutate(bs_samp = case_when(is.na(bs_samp) ~ 0, .default = bs_samp))
+  } else{
+    bs_n_su <- tidytable::expand_grid(bs_samp_event = 1:su_num,
+                                      cat = 1:pc,
+                                      selex_type = samp_ev$nss$selex_type) %>% 
+      tidytable::left_join(bs_su %>% 
+                             tidytable::left_join(samp_ev$n_su) %>% 
+                             tidytable::select(bs_samp_event = id, selex_type, cat, samp)) %>% 
+      tidytable::mutate(bs_samp = samp)
+  }
   
   # compute proportion of sample size across sampling units
   bs_n_su %>% 
@@ -372,12 +385,13 @@ bs_samp_event <- function(samp_ev){
 #' @param su_samp vector of sampling unit sample sizes
 #' @param p_su_samp vector of probabilities for sampling unit sample sizes
 #' @param iters number of bootstrap iterations
+#' @param boot_2nd boolean, whether to bootstrap 2nd stage
 #'
 #' @return list of simulated pop'n realized sample size and input sample size from bootstrap of realized sampling evennt
 #' 
 #' @export
 #' 
-bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
+bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, boot_2nd){
   
   # get a sample realization ----
   
@@ -441,7 +455,7 @@ bs_sim <- function(d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters){
   
   
   # run bootstrap of sampling event ----
-  rr_bs <- purrr::map(1:iters, ~bs_samp_event(samp_ev))
+  rr_bs <- purrr::map(1:iters, ~bs_samp_event(samp_ev, boot_2nd))
   
   # set up data list
   data <- list(exp = samp_ev$comp %>% 
