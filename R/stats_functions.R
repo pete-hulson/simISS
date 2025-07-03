@@ -57,11 +57,30 @@ est_stats <- function(rr_sim, sim_popn){
     tidytable::map_df(., ~as.data.frame(.x), .id = "comb") %>% 
     tidytable::select(-comb)
   
+  # get number of zero's in data
+  rnd <- 4
+  num_zero <- data$obs %>%
+    tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
+    tidytable::filter(p_obs == 0) %>% 
+    tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type)) %>% 
+    tidytable::summarise(num_zero = mean(n_0), .by = c(sim, selex_type, comp_type)) %>% 
+    tidytable::mutate(num_zero_o = case_when(num_zero > 0 ~ 1,
+                                             .default = 0)) %>% 
+    tidytable::summarise(num_zero_o = sum(num_zero_o), .by = c(selex_type, comp_type)) %>% 
+    tidytable::left_join(data$exp %>%
+                           tidytable::mutate(p_true = round(p_true, digits = rnd)) %>%
+                           tidytable::filter(p_true == 0) %>% 
+                           tidytable::summarise(n_0 = .N, .by = c(selex_type))) %>%
+    tidytable::mutate(num_zero_e = case_when(is.na(n_0) ~ 'N',
+                                             .default = 'Y')) %>% 
+    tidytable::select(-n_0)
+  
   # put results together ----
   iss_sim %>% 
     tidytable::left_join(logistN_sim) %>% 
-    tidytable::left_join(DM_sim) -> res
-  
+    tidytable::left_join(DM_sim) %>% 
+    tidytable::left_join(num_zero) -> res
+
   res
 }
 
@@ -78,7 +97,7 @@ est_stats <- function(rr_sim, sim_popn){
 est_logistic_normal <- function(data = NULL, 
                                 selex_t = NULL,
                                 comp_t = NULL){
-  
+
   # set up data ----
   
   # replace zeros following Aitchison 2003
@@ -104,7 +123,7 @@ est_logistic_normal <- function(data = NULL,
     tidytable::mutate(p_true = round(p_true / sum(p_true), digits = rnd + 1)) %>% 
     tidytable::select(-n_0) %>% 
     tidytable::pull(p_true)
-  
+
   # observed
   o <- data$obs %>%
     tidytable::filter(selex_type == selex_t,
@@ -117,8 +136,8 @@ est_logistic_normal <- function(data = NULL,
                            tidytable::filter(p_obs == 0) %>% 
                            tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
     tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd),
-                                                             .default =  round(eps * (n_0 + 1) * (b - n_0) / b^2, digits = rnd)),
+    tidytable::mutate(p_obs = case_when(n_0 != 0 ~ case_when(p_obs > round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd) ~ p_obs - round(eps * n_0 * (n_0 + 1) / b^2, digits = rnd + 1),
+                                                             .default =  round(eps * (n_0 + 1) * (b - n_0) / b^2, digits = rnd + 1)),
                                         .default = p_obs)) %>% 
     tidytable::mutate(p_obs = round(p_obs / sum(p_obs), digits = rnd + 1), 
                       .by = c(sim, selex_type, comp_type)) %>% 
@@ -126,23 +145,6 @@ est_logistic_normal <- function(data = NULL,
     tidytable::pivot_wider(names_from = cat, values_from = p_obs) %>% 
     tidytable::select(-c(sim, selex_type, comp_type)) %>% 
     as.matrix(.)
-
-  # get number of zero's in data
-  num_zero <- data$obs %>%
-    tidytable::filter(selex_type == selex_t,
-                      comp_type == comp_t) %>%
-    tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
-    tidytable::left_join(data$obs %>%
-                           tidytable::filter(selex_type == selex_t,
-                                             comp_type == comp_t) %>%
-                           tidytable::mutate(p_obs = round(p_obs, digits = rnd)) %>%
-                           tidytable::filter(p_obs == 0) %>% 
-                           tidytable::summarise(n_0 = .N, .by = c(sim, selex_type, comp_type))) %>% 
-    tidytable::mutate(n_0 = tidytable::replace_na(n_0, 0)) %>% 
-    tidytable::summarise(num_zero = mean(n_0), .by = c(sim, selex_type, comp_type)) %>% 
-    tidytable::filter(num_zero > 0) %>% 
-    tidytable::summarise(num_zero = length(num_zero)) %>% 
-    tidytable::pull(num_zero)
 
   # run RTMB models ----
   
@@ -219,8 +221,7 @@ est_logistic_normal <- function(data = NULL,
   # get output
   res <- list(res = data.frame(sigma_iid = as.numeric(exp(opt_iid$par)),
                                sigma_1DAR1 = as.numeric(exp(opt_1DAR1$par[1])),
-                               rho_1DAR1 = as.numeric(2/(1+ exp(-2 * opt_1DAR1$par[2])) - 1), 
-                               num_zero = num_zero,
+                               rho_1DAR1 = as.numeric(2/(1+ exp(-2 * opt_1DAR1$par[2])) - 1),
                                selex_type = selex_t, comp_type = comp_t))
   
   # return results
