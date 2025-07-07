@@ -86,7 +86,8 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
   
   # classify population unit structure as 'recruitment pulse', 'multimodal', or 'unimodal'
   p_true %>% 
-    tidytable::select(-N_c) %>% 
+    tidytable::select(-N_c) %>%
+    tidytable::filter(selex_type == 'uniform') %>% 
     tidytable::left_join(p_true %>% 
                            tidytable::select(-N_c) %>% 
                            tidytable::mutate(cat = cat + 1) %>% 
@@ -96,7 +97,7 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
     tidytable::select(cat, test, selex_type) -> .test
   
   p_true %>% 
-    tidytable::filter(cat <= 2) %>% 
+    tidytable::filter(cat <= 2, selex_type == 'uniform') %>% 
     tidytable::summarise(rec_test = sum(p_true), .by = selex_type) %>% 
     tidytable::left_join(.test %>% 
                            tidytable::left_join(.test %>% 
@@ -107,12 +108,14 @@ get_popn <- function(d, pu, pc, pu_cv, replace_pc = TRUE, plot = TRUE, plot_name
                            tidytable::summarise(mode_test = .N, .by = selex_type)) %>% 
     tidytable::mutate(mode_test = tidytable::replace_na(mode_test, 0)) -> test
   
-  popn_strctr <- test %>% 
-    tidytable::mutate(popn_strctr = case_when(rec_test > 0.45 ~ 'recruitment pulse',
-                                              rec_test <= 0.45 ~ case_when(mode_test > 1 ~ 'multimodal', 
-                                                                           .default = 'unimodal'))) %>% 
-    tidytable::select(selex_type, popn_strctr)
-  
+  popn_strctr <- p_true %>% 
+    tidytable::distinct(selex_type) %>% 
+    tidytable::mutate(popn_strctr = test %>% 
+                        tidytable::mutate(popn_strctr = case_when(rec_test > 0.45 ~ 'recruitment pulse',
+                                                                  rec_test <= 0.45 ~ case_when(mode_test > 1 ~ 'multimodal', 
+                                                                                               .default = 'unimodal'))) %>% 
+                        tidytable::pull(popn_strctr))
+
   # if desired, plot generated pop'n
   if(isTRUE(plot)){
     
