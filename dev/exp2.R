@@ -21,7 +21,7 @@ full_run = FALSE
 sim_reps <- 5
 
 # number of desired simulation replicates
-X <- 250
+X <- 500
 
 # number of bootstrap iterations
 iters <- 500
@@ -57,13 +57,13 @@ d <- log(0.01) / (1 - pc)
 if(isTRUE(full_run)){
   tictoc::tic()
   future::plan(multisession, workers = 7)
-  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
+  run_exp2_tests(X, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
 }else{
   tictoc::tic()
   future::plan(multisession, workers = 7)
-  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters, cov_strc = c('iid', '1DAR1'))
+  run_exp2_tests(sim_reps, d, pu, pc, pu_cv, su_num, su_samp, p_su_samp, iters)
   future::plan(sequential)
   runtime_test_exp2 <- tictoc::toc()
 }

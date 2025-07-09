@@ -111,7 +111,7 @@ test_C <- function(sim_reps, d, pu, pu_cv, su_num, su_samp, p_su_samp, iters){
   #start timer
   tictoc::tic()
   # set numbers of categories
-  cat_test <- c(10, 15, 25, 50)
+  cat_test <- c(5, 10, 15)
   # run simulation
   rr_cat <- purrr::map(1:sim_reps, ~purrr::map(1:length(cat_test), ~rep_sim(d, pu, pc = cat_test[.], pu_cv, su_num, su_samp, p_su_samp, iters)))
   # save & plot results
